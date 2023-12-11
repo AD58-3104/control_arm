@@ -1,1 +1,1 @@
-octave  --persist .\plot_arm.m --no-gui
+octave  --persist %1 --no-gui
