@@ -3,7 +3,9 @@
 #include "dxl_motor.hpp"
 #include "robot_model.hpp"
 #include <list>
+#include <barrier>
 #include <memory>
+#include <future>
 
 using arm_shared_ptr_t = std::shared_ptr<std::list<StraightChainRobotModel>>;
 
@@ -40,7 +42,9 @@ void moveArm(dxl_motor &motors)
             position *= -1.0f;
         }
         position = 150 + position;
-        motors.setGoalPosition(motor.motor_id_, position);
+        //バリア同期する
+        const size_t barrier_num = 1 + motor.clone_motors.size();
+        std::barrier sync(barrier_num);
         if (!motor.clone_motors.empty())
         {
             for (auto &clone_motor : motor.clone_motors)
@@ -51,9 +55,14 @@ void moveArm(dxl_motor &motors)
                     position *= -1.0f;
                 }
                 position = 150 + position;
-                motors.setGoalPosition(clone_motor.motor_id_, position);
+                auto fut = std::async(std::launch::async, [&motors, &clone_motor, position, &sync]() {
+                    sync.arrive_and_wait();
+                    motors.setGoalPosition(clone_motor.motor_id_, position);
+                });
             }
         }
+        sync.arrive_and_wait();
+        motors.setGoalPosition(motor.motor_id_, position);
     }
     return;
 }
