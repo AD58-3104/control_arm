@@ -58,4 +58,30 @@ void moveArm(dxl_motor &motors)
     return;
 }
 
+/**
+ * @brief アームのリンクそれぞれの位置の結果
+ */
+struct ResultPosition
+{
+    std::vector<float> x;
+    std::vector<float> y;
+    std::vector<float> z;
+};
+
+ResultPosition calcForwardKinematics(){
+    if(robot_arm == nullptr){
+        throw std::runtime_error("robot_arm is not initialized!");
+    }
+    ResultPosition result;
+    Eigen::Matrix4d res = Eigen::Matrix4d::Identity();
+    for (auto &motor : *robot_arm)
+    {
+        res *= motor.getTransformMatrix();
+        result.x.push_back(res(0, 3));
+        result.y.push_back(res(1, 3));
+        result.z.push_back(res(2, 3));
+    }
+    return result;
+}
+
 #endif // !ROBOT_ARM_HPP
