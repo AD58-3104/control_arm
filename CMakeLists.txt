@@ -32,7 +32,7 @@ file(GLOB_RECURSE SCPLOT_SOURCES ${sciplot_SOURCE_DIR}/sciplot/*)
 find_package(Eigen3 REQUIRED)
 add_executable(test_matplotlib test_matplotlib.cpp ${SCPLOT_SOURCES})
 add_executable(test_move test_move.cpp ${DXL_SOURCES} robot_model.hpp)
-add_executable(test_geome test_geome.cpp  robot_model.hpp)
+add_executable(test_geome test_geome.cpp  robot_model.hpp ${SCPLOT_SOURCES})
 
 target_link_libraries(test_matplotlib PRIVATE Eigen3::Eigen)
 target_include_directories(test_matplotlib PRIVATE ${sciplot_SOURCE_DIR} ${EIGEN3_INCLUDE_DIRS})
