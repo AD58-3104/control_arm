@@ -31,6 +31,7 @@ file(GLOB_RECURSE DXL_SOURCES ${dynamixelsdk_SOURCE_DIR}/c++/src/dynamixel_sdk/*
 find_package(Eigen3 REQUIRED)
 add_executable(test_matplotlib test_matplotlib.cpp)
 add_executable(test_move test_move.cpp ${DXL_SOURCES} robot_model.hpp)
+add_executable(test_geome test_geome.cpp  robot_model.hpp)
 
 target_link_libraries(test_matplotlib PRIVATE sciplot::sciplot Eigen3::Eigen)
 target_include_directories(test_matplotlib PRIVATE ${sciplot_SOURCE_DIR} ${EIGEN3_INCLUDE_DIRS})
@@ -38,4 +39,8 @@ target_include_directories(test_matplotlib PRIVATE ${sciplot_SOURCE_DIR} ${EIGEN
 target_link_libraries(test_move PRIVATE  Eigen3::Eigen)
 target_include_directories(test_move PRIVATE  ${EIGEN3_INCLUDE_DIRS} ${dynamixelsdk_SOURCE_DIR})
 
+target_link_libraries(test_geome PRIVATE  Eigen3::Eigen)
+target_include_directories(test_geome PRIVATE  ${EIGEN3_INCLUDE_DIRS})
+
 target_compile_options(test_move PRIVATE -fdiagnostics-color)
+target_compile_options(test_geome PRIVATE -fdiagnostics-color)
