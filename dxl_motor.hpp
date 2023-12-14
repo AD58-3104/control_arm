@@ -11,6 +11,7 @@
 constexpr uint8_t ADDR_MX_TORQUE_ENABLE = 24; // Control table address is different in Dynamixel model
 constexpr uint8_t ADDR_MX_GOAL_POSITION = 30;
 constexpr uint8_t ADDR_MX_PRESENT_POSITION = 36;
+constexpr uint8_t ADDR_MX_MOVING_APEED = 32;  //動くスピード。しかしjointモードとwheelモードで違うらしい。
 
 constexpr uint8_t PROTOCOL_VERSION = 1.0;
 constexpr uint32_t BAUDRATE = 1000000;
@@ -21,6 +22,8 @@ constexpr uint8_t TORQUE_DISABLE = 0;                // Value for disabling the 
 constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 100;   // 稼働範囲の下限 //事故りそうなので最初は小さくする
 constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 200; // 可動範囲の上限
 constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 10;  // 位置の誤差の閾値
+
+// TODO 速度を遅めに設定しておく
 
 class dxl_motor
 {
