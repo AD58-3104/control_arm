@@ -45,3 +45,5 @@ target_include_directories(test_geome PRIVATE  ${EIGEN3_INCLUDE_DIRS})
 
 target_compile_options(test_move PRIVATE -fdiagnostics-color)
 target_compile_options(test_geome PRIVATE -fdiagnostics-color)
+
+target_compile_features(test_move PRIVATE cxx_std_20)
