@@ -18,8 +18,8 @@ const char *DEVICENAME = "/dev/ttyUSB0";
 
 constexpr uint8_t TORQUE_ENABLE = 1;                 // Value for enabling the torque
 constexpr uint8_t TORQUE_DISABLE = 0;                // Value for disabling the torque
-constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 0;   // 下限
-constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 300; // 上限
+constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 100;   // 稼働範囲の下限 //事故りそうなので最初は小さくする
+constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 200; // 可動範囲の上限
 constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 10;  // 位置の誤差の閾値
 
 class dxl_motor
@@ -33,6 +33,7 @@ public:
     dxl_motor();
     ~dxl_motor();
     void setTorqueEnable(const uint8_t id, const bool is_enable);
+    void allTorqueEnable(const bool is_enable);
     void addMotorId(const uint8_t id);
     uint16_t setGoalPosition(const uint8_t id, const uint16_t goal_position);
 };
@@ -67,11 +68,17 @@ dxl_motor::dxl_motor()
 dxl_motor::~dxl_motor()
 {
     // Disable Dynamixel Torque
+    allTorqueEnable(false);
+    portHandler_->closePort();
+}
+
+void dxl_motor::allTorqueEnable(const bool is_enable)
+{
     for (const auto &id : motor_id_set_)
     {
-        setTorqueEnable(id, false);
+        setTorqueEnable(id, is_enable);
     }
-    portHandler_->closePort();
+    return;
 }
 
 void dxl_motor::setTorqueEnable(const uint8_t id, const bool is_enable)
@@ -109,7 +116,7 @@ void dxl_motor::addMotorId(const uint8_t id)
 /**
  * @brief モータを動かす。モータが目標位置に近くなるまでブロッキングする。
  * @param id モータのid
- * @param goal_position　目標位置 
+ * @param goal_position　目標位置(中央からの角度) [degree](0~300)
  * @return 最終的な現在位置
  */
 uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_position)
