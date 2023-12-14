@@ -25,15 +25,16 @@ message(STATUS "dynamixelsdk_SOURCE_DIR: ${dynamixelsdk_SOURCE_DIR}")
 message(STATUS "sciplot_content_SOURCE_DIR: ${sciplot_content_SOURCE_DIR}")
 message(STATUS "dynamixelsdk_content_SOURCE_DIR: ${dynamixelsdk_content_SOURCE_DIR}")
 
-include_directories(${sciplot_SOURCE_DIR} ${dynamixelsdk_SOURCE_DIR}/c++/include/dynamixel_sdk)
+include_directories(${sciplot_SOURCE_DIR}/sciplot ${dynamixelsdk_SOURCE_DIR}/c++/include/dynamixel_sdk)
 file(GLOB_RECURSE DXL_SOURCES ${dynamixelsdk_SOURCE_DIR}/c++/src/dynamixel_sdk/*.cpp)
+file(GLOB_RECURSE SCPLOT_SOURCES ${sciplot_SOURCE_DIR}/sciplot/*)
 
 find_package(Eigen3 REQUIRED)
-add_executable(test_matplotlib test_matplotlib.cpp)
+add_executable(test_matplotlib test_matplotlib.cpp ${SCPLOT_SOURCES})
 add_executable(test_move test_move.cpp ${DXL_SOURCES} robot_model.hpp)
 add_executable(test_geome test_geome.cpp  robot_model.hpp)
 
-target_link_libraries(test_matplotlib PRIVATE sciplot::sciplot Eigen3::Eigen)
+target_link_libraries(test_matplotlib PRIVATE Eigen3::Eigen)
 target_include_directories(test_matplotlib PRIVATE ${sciplot_SOURCE_DIR} ${EIGEN3_INCLUDE_DIRS})
 
 target_link_libraries(test_move PRIVATE  Eigen3::Eigen)
