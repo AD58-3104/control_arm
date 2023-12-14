@@ -45,6 +45,7 @@ void moveArm(dxl_motor &motors)
         //バリア同期する
         const size_t barrier_num = 1 + motor.clone_motors.size();
         std::barrier sync(barrier_num);
+        std::future<void> fut;
         if (!motor.clone_motors.empty())
         {
             for (auto &clone_motor : motor.clone_motors)
@@ -55,7 +56,7 @@ void moveArm(dxl_motor &motors)
                     position *= -1.0f;
                 }
                 position = 150 + position;
-                auto fut = std::async(std::launch::async, [&motors, &clone_motor, position, &sync]() {
+                fut = std::async(std::launch::async, [&motors, &clone_motor, position, &sync]() {
                     sync.arrive_and_wait();
                     motors.setGoalPosition(clone_motor.motor_id_, position);
                 });
@@ -63,6 +64,10 @@ void moveArm(dxl_motor &motors)
         }
         sync.arrive_and_wait();
         motors.setGoalPosition(motor.motor_id_, position);
+        if (fut.valid())
+        {
+            fut.get();
+        }
     }
     return;
 }

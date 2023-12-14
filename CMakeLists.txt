@@ -37,13 +37,14 @@ add_executable(test_geome test_geome.cpp  robot_model.hpp ${SCPLOT_SOURCES})
 target_link_libraries(test_matplotlib PRIVATE Eigen3::Eigen)
 target_include_directories(test_matplotlib PRIVATE ${sciplot_SOURCE_DIR} ${EIGEN3_INCLUDE_DIRS})
 
-target_link_libraries(test_move PRIVATE  Eigen3::Eigen)
+target_link_libraries(test_move PRIVATE  Eigen3::Eigen pthread)
 target_include_directories(test_move PRIVATE  ${EIGEN3_INCLUDE_DIRS} ${dynamixelsdk_SOURCE_DIR})
 
-target_link_libraries(test_geome PRIVATE  Eigen3::Eigen)
+target_link_libraries(test_geome PRIVATE  Eigen3::Eigen pthread)
 target_include_directories(test_geome PRIVATE  ${EIGEN3_INCLUDE_DIRS})
 
 target_compile_options(test_move PRIVATE -fdiagnostics-color)
 target_compile_options(test_geome PRIVATE -fdiagnostics-color)
 
 target_compile_features(test_move PRIVATE cxx_std_20)
+target_compile_features(test_geome PRIVATE cxx_std_20)
