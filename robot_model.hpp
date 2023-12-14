@@ -8,7 +8,7 @@
 
 /**
  * @brief ZYXオイラー角から回転行列を生成する
- * @param rotate ZYXオイラー角 [rad]
+ * @param rotate ZYXオイラー角[rad]。渡すのはx,y,zの順番で良い。内部でZYXの順に掛ける 
  * @return Eigen::Matrix3d 回転行列
  */
 Eigen::Matrix4d get3DRotationMatrix(const Eigen::Vector3d &rotate)
@@ -30,7 +30,8 @@ struct StraightChainRobotModel
     Eigen::Matrix4d x_link_rotate_;       // ZYXオイラー角 [rad]
     const Eigen::Vector3d z_link_length_;
     Eigen::Matrix4d z_link_rotate_;
-    double robote_direction; // 1 or -1
+    double joint_angle_; // [rad]
+    bool does_reverse_; // 1 or -1
     uint32_t motor_id_;
     StraightChainRobotModel(
         const uint32_t motor_id,
@@ -63,6 +64,24 @@ struct StraightChainRobotModel
         return;
     }
 
+    void setReverse(const bool does_reverse)
+    {
+        does_reverse_ = does_reverse;
+        return;
+    }
+
+    /**
+     * @brief Set the Joint Angle object
+     * @param joint_angle 
+     * @todo 角度の変更に伴う同次変換行列の更新
+     */
+    void setJointAngle(const double joint_angle)
+    {
+        joint_angle_ = joint_angle;
+        z_link_rotate_ = get3DRotationMatrix(Eigen::Vector3d(0, 0, joint_angle_));
+        return;
+    }
+
     Eigen::Matrix4d getTransformMatrix()
     {
         Eigen::Matrix4d transform_matrix = Eigen::Matrix4d::Identity();
@@ -83,6 +102,16 @@ struct StraightChainRobotModel
     {
         z_link_rotate_(0,2) = angle;
         return;
+    }
+
+    /**
+     * @brief 逆運動学を解く
+     * @param target_position 目標位置(x,y,z) [mm]
+     * @todo 逆運動学の実装 向きを決めて、sin,cosを解くのやつを実装する。
+     */
+    void solveInverseKinematicsGeometry(const Eigen::Vector3d &target_position)
+    {
+        
     }
 };
 
