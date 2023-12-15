@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <iostream>
+#include <iomanip>
 
 /**
  * @brief ZYXオイラー角から回転行列を生成する
@@ -33,9 +34,12 @@ struct StraightChainRobotModel
     Eigen::Matrix4d z_link_rotate_;
     double joint_angle_; // [rad]
     bool does_reverse_;  // 1 or -1
-    uint32_t motor_id_;
+    uint8_t motor_id_;
+    StraightChainRobotModel(const uint8_t motor_id, const bool does_reverse) : motor_id_(motor_id), does_reverse_(does_reverse_)
+    {
+    }
     StraightChainRobotModel(
-        const uint32_t motor_id,
+        const uint8_t motor_id,
         const double x_link_length,
         const Eigen::Vector3d x_link_rotate,
         const double z_link_length,
@@ -43,12 +47,14 @@ struct StraightChainRobotModel
                                                x_link_length_(x_link_length, 0, 0),
                                                x_link_rotate_(get3DRotationMatrix(x_link_rotate)),
                                                z_link_length_(0, 0, z_link_length),
-                                               z_link_rotate_(get3DRotationMatrix(z_link_rotate))
+                                               z_link_rotate_(get3DRotationMatrix(z_link_rotate)),
+                                               does_reverse_(false)
     {
     }
     void printLinkState()
     {
         std::cout << "------- motor id <" << motor_id_ << "> --------" << std::endl;
+        std::cout << "------- reverse <" << std::boolalpha << does_reverse_ << "> --------" << std::endl;
         std::cout << "*** x_link_length ***\n"
                   << x_link_length_ << std::endl;
         std::cout << "*** x_link_rotate ***\n"
@@ -82,6 +88,13 @@ struct StraightChainRobotModel
     {
         joint_angle_ = joint_angle;
         z_link_rotate_ = get3DRotationMatrix(Eigen::Vector3d(0, 0, joint_angle_));
+        if (clone_motors.size() != 0)
+        {
+            for (auto &clone_motor : clone_motors)
+            {
+                clone_motor.setJointAngle(joint_angle);
+            }
+        }
         return;
     }
 
