@@ -21,7 +21,9 @@ constexpr uint8_t TORQUE_ENABLE = 1;                 // Value for enabling the t
 constexpr uint8_t TORQUE_DISABLE = 0;                // Value for disabling the torque
 constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 100;   // 稼働範囲の下限 //事故りそうなので最初は小さくする
 constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 200; // 可動範囲の上限
-constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 10;  // 位置の誤差の閾値
+constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 30;  // 位置の誤差の閾値
+
+constexpr double DXL_POSITION_RESOLUTION = 1024.0f / 300.0f;
 
 // TODO 速度を遅めに設定しておく
 
@@ -124,7 +126,7 @@ void dxl_motor::addMotorId(const uint8_t id)
  */
 uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_position)
 {
-    if (motor_id_set_.contains(id))
+    if (!motor_id_set_.contains(id))
     {
         throw std::runtime_error("This id is not registered!\n");
     }
@@ -134,10 +136,12 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
         throw std::runtime_error("Goal position is out of movable range!\n");
     }
 
+    const uint16_t goal_position_raw = goal_position * DXL_POSITION_RESOLUTION;
     int dxl_comm_result = COMM_TX_FAIL; // Communication result
     uint8_t dxl_error = 0;              // Dynamixel error
     // 位置指令
-    dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, id, ADDR_MX_GOAL_POSITION, goal_position, &dxl_error);
+    std::cout << "id" << (int)id << " is moving to " << goal_position_raw << " degree... " << std::endl;
+    dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, id, ADDR_MX_GOAL_POSITION, goal_position_raw, &dxl_error);
     if (dxl_comm_result != COMM_SUCCESS)
     {
         printf("%s\n", packetHandler_->getTxRxResult(dxl_comm_result));
@@ -161,9 +165,9 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
             printf("%s\n", packetHandler_->getRxPacketError(dxl_error));
         }
 
-        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", id, goal_position, dxl_present_position);
+        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", id, goal_position_raw, dxl_present_position);
         usleep(5000);
-    } while ((std::abs(goal_position - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
+    } while ((std::abs(goal_position_raw - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
     return dxl_present_position;
 }
 
