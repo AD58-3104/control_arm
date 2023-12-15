@@ -24,6 +24,7 @@ constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 1000; // 可動範囲の上限
 constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 10;   // 位置の誤差の閾値
 
 constexpr double DXL_POSITION_RESOLUTION = 1024.0f / 300.0f;
+constexpr uint16_t DXL_CENTOR_POSITION = 150;
 
 struct dxl_motor_sync_moves
 {
