@@ -45,6 +45,7 @@ public:
     ~dxl_motor();
     void setTorqueEnable(const uint8_t id, const bool is_enable);
     void allTorqueEnable(const bool is_enable);
+    void setAllSpeed(const uint16_t speed);
     void addMotorId(const uint8_t id);
     uint16_t setGoalPosition(const uint8_t id, const uint16_t goal_position);
     uint16_t setSyncGoalPosition(const std::vector<dxl_motor_sync_moves> &move_data);
@@ -119,6 +120,31 @@ void dxl_motor::setTorqueEnable(const uint8_t id, const bool is_enable)
     return;
 }
 
+/**
+ * @brief モータのスピードを設定する
+ * @param speed 0 ~ 1023 [0.111rpm]
+ */
+void dxl_motor::setAllSpeed(const uint16_t speed)
+{
+    int dxl_comm_result = COMM_TX_FAIL; // Communication result
+    uint8_t dxl_error = 0;              // Dynamixel error
+    for (const auto &id : motor_id_set_)
+    {
+        dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, id, ADDR_MX_MOVING_APEED, speed, &dxl_error);
+        if (dxl_comm_result != COMM_SUCCESS)
+        {
+            printf("%s\n", packetHandler_->getTxRxResult(dxl_comm_result));
+            throw std::runtime_error("Failed to set speed!\n");
+        }
+        else if (dxl_error != 0)
+        {
+            printf("%s\n", packetHandler_->getRxPacketError(dxl_error));
+            throw std::runtime_error("Failed to set speed!\n");
+        }
+    }
+    return;
+}
+
 void dxl_motor::addMotorId(const uint8_t id)
 {
     motor_id_set_.emplace(id);
@@ -177,7 +203,6 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
     } while ((std::abs(goal_position_raw - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
     return dxl_present_position;
 }
-
 
 /**
  * @brief モータを動かす。モータが目標位置に近くなるまでブロッキングする。
