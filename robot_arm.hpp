@@ -14,24 +14,23 @@ static arm_shared_ptr_t robot_arm;
 arm_shared_ptr_t createRobotArm()
 {
     robot_arm = std::make_shared<std::list<StraightChainRobotModel>>();
-    //ロボットモデルはここで定義する
+    // ロボットモデルはここで定義する
     robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    robot_arm->push_back(StraightChainRobotModel(3, 0, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    robot_arm->push_back(StraightChainRobotModel(4, 0, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    robot_arm->push_back(StraightChainRobotModel(2, 2, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    // robot_arm->push_back(StraightChainRobotModel(3, 2, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    // robot_arm->push_back(StraightChainRobotModel(4, 1, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     return robot_arm;
 }
 
 /**
  * @brief アームを動かす
  * @param robot_arm
- * @param motors
- * @todo クローンのリバース考慮
- * @todo 角度の変換
+ * @param motors 
  */
 void moveArm(dxl_motor &motors)
 {
-    if(robot_arm == nullptr){
+    if (robot_arm == nullptr)
+    {
         throw std::runtime_error("robot_arm is not initialized!");
     }
     for (auto &motor : *robot_arm)
@@ -41,13 +40,13 @@ void moveArm(dxl_motor &motors)
         {
             position *= -1.0f;
         }
-        position = 150 + position;
-        //バリア同期する
-        const size_t barrier_num = 1 + motor.clone_motors.size();
-        std::barrier sync(barrier_num);
-        std::future<void> fut;
+        position = DXL_CENTOR_POSITION + position;
+        //クローン動作のモータがある場合
         if (!motor.clone_motors.empty())
         {
+            //基のモータのデータを追加
+            std::vector<dxl_motor_sync_moves> move_data;
+            move_data.push_back({motor.motor_id_, position});
             for (auto &clone_motor : motor.clone_motors)
             {
                 uint16_t position = motor.joint_angle_ * 180 / M_PI; // 取り敢えずラジアン
@@ -55,18 +54,15 @@ void moveArm(dxl_motor &motors)
                 {
                     position *= -1.0f;
                 }
-                position = 150 + position;
-                fut = std::async(std::launch::async, [&motors, &clone_motor, position, &sync]() {
-                    sync.arrive_and_wait();
-                    motors.setGoalPosition(clone_motor.motor_id_, position);
-                });
+                position = DXL_CENTOR_POSITION + position;
+                //クローン動作のモータを追加
+                move_data.push_back({clone_motor.motor_id_, position});
             }
+            motors.setSyncGoalPosition(move_data);
         }
-        sync.arrive_and_wait();
-        motors.setGoalPosition(motor.motor_id_, position);
-        if (fut.valid())
+        else
         {
-            fut.get();
+            motors.setGoalPosition(motor.motor_id_, position);
         }
     }
     return;
@@ -82,8 +78,10 @@ struct ResultPosition
     std::vector<float> z;
 };
 
-ResultPosition calcForwardKinematics(){
-    if(robot_arm == nullptr){
+ResultPosition calcForwardKinematics()
+{
+    if (robot_arm == nullptr)
+    {
         throw std::runtime_error("robot_arm is not initialized!");
     }
     ResultPosition result;
@@ -95,6 +93,7 @@ ResultPosition calcForwardKinematics(){
         result.y.push_back(res(1, 3));
         result.z.push_back(res(2, 3));
     }
+    std::cout << res << std::endl;
     return result;
 }
 
