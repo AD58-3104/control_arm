@@ -8,7 +8,7 @@
 
 /**
  * @brief ZYXオイラー角から回転行列を生成する
- * @param rotate ZYXオイラー角[rad]。渡すのはx,y,zの順番で良い。内部でZYXの順に掛ける 
+ * @param rotate ZYXオイラー角[rad]。渡すのはx,y,zの順番で良い。内部でZYXの順に掛ける
  * @return Eigen::Matrix3d 回転行列
  */
 Eigen::Matrix4d get3DRotationMatrix(const Eigen::Vector3d &rotate)
@@ -16,12 +16,13 @@ Eigen::Matrix4d get3DRotationMatrix(const Eigen::Vector3d &rotate)
     Eigen::Matrix4d rotate_matrix = Eigen::Matrix4d::Identity();
     Eigen::Matrix3d tmp;
     tmp = Eigen::AngleAxisd(rotate[2], Eigen::Vector3d::UnitZ()) *
-                                      Eigen::AngleAxisd(rotate[1], Eigen::Vector3d::UnitY()) *
-                                      Eigen::AngleAxisd(rotate[0], Eigen::Vector3d::UnitX());
+          Eigen::AngleAxisd(rotate[1], Eigen::Vector3d::UnitY()) *
+          Eigen::AngleAxisd(rotate[0], Eigen::Vector3d::UnitX());
     rotate_matrix.block<3, 3>(0, 0) = tmp;
     return rotate_matrix;
 }
 
+constexpr uint8_t clone_id_offset = 8; // クローンのidは元のid+8にする
 struct StraightChainRobotModel
 {
     std::list<StraightChainRobotModel> clone_motors;
@@ -31,7 +32,7 @@ struct StraightChainRobotModel
     const Eigen::Vector3d z_link_length_;
     Eigen::Matrix4d z_link_rotate_;
     double joint_angle_; // [rad]
-    bool does_reverse_; // 1 or -1
+    bool does_reverse_;  // 1 or -1
     uint32_t motor_id_;
     StraightChainRobotModel(
         const uint32_t motor_id,
@@ -58,8 +59,10 @@ struct StraightChainRobotModel
                   << z_link_rotate_ << std::endl;
         std::cout << "-------------------------------------------------" << std::endl;
     }
+
     void setCloneMotor(StraightChainRobotModel motor)
     {
+        assert(motor.motor_id_ != motor_id_ + clone_id_offset); // idが間違っている
         clone_motors.push_back(motor);
         return;
     }
@@ -72,7 +75,7 @@ struct StraightChainRobotModel
 
     /**
      * @brief Set the Joint Angle object
-     * @param joint_angle 
+     * @param joint_angle
      * @todo 角度の変更に伴う同次変換行列の更新
      */
     void setJointAngle(const double joint_angle)
@@ -93,14 +96,14 @@ struct StraightChainRobotModel
         transform_matrix *= z_link_rotate_;
         return transform_matrix;
     }
-    
+
     /**
      * @brief DH記法におけるzの回転角を更新する
      * @param angle 回転角度[rad]
      */
     void updateJointAngle(const double angle)
     {
-        z_link_rotate_(0,2) = angle;
+        z_link_rotate_(0, 2) = angle;
         return;
     }
 
@@ -111,7 +114,6 @@ struct StraightChainRobotModel
      */
     void solveInverseKinematicsGeometry(const Eigen::Vector3d &target_position)
     {
-        
     }
 };
 
