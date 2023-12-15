@@ -20,9 +20,7 @@ arm_shared_ptr_t createRobotArm()
     // origin
     robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 24, Eigen::Vector3d::Zero()));
     // 根元回転
-    robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d(0, -M_PI / 2.0, 0), 0, Eigen::Vector3d::Zero()));
-    // 根元からのリンク
-    robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d(0, 0, 0), 0, Eigen::Vector3d::Zero()));
+    robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d(0, -M_PI / 2.0, 0), 0, Eigen::Vector3d::Zero()));
     // id2のクローン. リバースがtrue
     robot_arm->back().clone_motors.push_back(StraightChainRobotModel(2 + clone_id_offset, true));
     // 次のリンク
