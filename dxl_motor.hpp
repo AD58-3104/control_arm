@@ -11,19 +11,25 @@
 constexpr uint8_t ADDR_MX_TORQUE_ENABLE = 24; // Control table address is different in Dynamixel model
 constexpr uint8_t ADDR_MX_GOAL_POSITION = 30;
 constexpr uint8_t ADDR_MX_PRESENT_POSITION = 36;
-constexpr uint8_t ADDR_MX_MOVING_APEED = 32;  //動くスピード。しかしjointモードとwheelモードで違うらしい。
+constexpr uint8_t ADDR_MX_MOVING_APEED = 32; // 動くスピード。しかしjointモードとwheelモードで違うらしい。
 
 constexpr uint8_t PROTOCOL_VERSION = 1.0;
 constexpr uint32_t BAUDRATE = 1000000;
 const char *DEVICENAME = "/dev/ttyUSB0";
 
-constexpr uint8_t TORQUE_ENABLE = 1;                 // Value for enabling the torque
-constexpr uint8_t TORQUE_DISABLE = 0;                // Value for disabling the torque
-constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 100;   // 稼働範囲の下限 //事故りそうなので最初は小さくする
-constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 200; // 可動範囲の上限
-constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 30;  // 位置の誤差の閾値
+constexpr uint8_t TORQUE_ENABLE = 1;                  // Value for enabling the torque
+constexpr uint8_t TORQUE_DISABLE = 0;                 // Value for disabling the torque
+constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 100;  // 稼働範囲の下限 //事故りそうなので最初は小さくする
+constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 1000; // 可動範囲の上限
+constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 10;   // 位置の誤差の閾値
 
 constexpr double DXL_POSITION_RESOLUTION = 1024.0f / 300.0f;
+
+struct dxl_motor_sync_moves
+{
+    const uint8_t id;
+    const uint16_t goal_position;
+};
 
 // TODO 速度を遅めに設定しておく
 
@@ -41,6 +47,7 @@ public:
     void allTorqueEnable(const bool is_enable);
     void addMotorId(const uint8_t id);
     uint16_t setGoalPosition(const uint8_t id, const uint16_t goal_position);
+    uint16_t setSyncGoalPosition(const std::vector<dxl_motor_sync_moves> &move_data);
 };
 
 dxl_motor::dxl_motor()
@@ -171,5 +178,49 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
     return dxl_present_position;
 }
 
+
+/**
+ * @brief モータを動かす。モータが目標位置に近くなるまでブロッキングする。
+ * @param id モータのid
+ * @param goal_position　目標位置(中央からの角度) [degree](0~300)
+ * @return 最終的な現在位置
+ */
+uint16_t dxl_motor::setSyncGoalPosition(const std::vector<dxl_motor_sync_moves> &move_data)
+{
+    if (move_data.empty())
+    {
+        throw std::runtime_error("move_data is empty!");
+    }
+    dynamixel::GroupSyncWrite groupSyncWrite(portHandler_, packetHandler_, ADDR_MX_GOAL_POSITION, 2);
+    for (const auto &data : move_data)
+    {
+        uint8_t param[2];
+        uint16_t goal_position_raw = data.goal_position * DXL_POSITION_RESOLUTION;
+        param[0] = DXL_LOBYTE(goal_position_raw);
+        param[1] = DXL_HIBYTE(goal_position_raw);
+        if (groupSyncWrite.addParam(data.id, param) != true)
+        {
+            throw std::runtime_error("Failed to add param!");
+        }
+    }
+    if (groupSyncWrite.txPacket() != COMM_SUCCESS)
+    {
+        throw std::runtime_error("Failed to send packet!");
+    }
+    groupSyncWrite.clearParam();
+    uint16_t dxl_present_position = 0; // Present position
+    do
+    {
+        // Read present position
+        int dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, move_data[0].id, ADDR_MX_PRESENT_POSITION, &dxl_present_position, nullptr);
+        if (dxl_comm_result != COMM_SUCCESS)
+        {
+            printf("%s\n", packetHandler_->getTxRxResult(dxl_comm_result));
+        }
+        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", move_data[0].id, (uint16_t)(move_data[0].goal_position * DXL_POSITION_RESOLUTION), dxl_present_position);
+        usleep(10000); // 10ms待つ
+    } while ((std::abs(move_data[0].goal_position * DXL_POSITION_RESOLUTION - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
+    return dxl_present_position;
+}
 
 #endif // !DXL_MOTORCLASS_HPP_
