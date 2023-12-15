@@ -15,17 +15,30 @@ arm_shared_ptr_t createRobotArm()
 {
     robot_arm = std::make_shared<std::list<StraightChainRobotModel>>();
     // ロボットモデルはここで定義する
-    robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    robot_arm->push_back(StraightChainRobotModel(2, 2, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    // robot_arm->push_back(StraightChainRobotModel(3, 2, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    // robot_arm->push_back(StraightChainRobotModel(4, 1, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    // 根元の回転軸をzとした左手系で定義。xは右、yは上
+
+    // origin
+    robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 24, Eigen::Vector3d::Zero()));
+    // 根元回転
+    robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d(0, -M_PI / 2.0, 0), 0, Eigen::Vector3d::Zero()));
+    // 根元からのリンク
+    robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d(0, 0, 0), 0, Eigen::Vector3d::Zero()));
+    // id2のクローン. リバースがtrue
+    robot_arm->back().clone_motors.push_back(StraightChainRobotModel(2 + clone_id_offset, true));
+    // 次のリンク
+    // ここyへの22.5も足さなくてはいけない...。どうしよう
+    robot_arm->push_back(StraightChainRobotModel(3, 195, Eigen::Vector3d(0, 0, 0), 0, Eigen::Vector3d(0, 0, M_PI / 2)));
+    // 次のリンク
+    robot_arm->push_back(StraightChainRobotModel(4, 190, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    // 手先のリンク
+    robot_arm->push_back(StraightChainRobotModel(5, 66.5, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     return robot_arm;
 }
 
 /**
  * @brief アームを動かす
  * @param robot_arm
- * @param motors 
+ * @param motors
  */
 void moveArm(dxl_motor &motors)
 {
@@ -41,10 +54,10 @@ void moveArm(dxl_motor &motors)
             position *= -1.0f;
         }
         position = DXL_CENTOR_POSITION + position;
-        //クローン動作のモータがある場合
+        // クローン動作のモータがある場合
         if (!motor.clone_motors.empty())
         {
-            //基のモータのデータを追加
+            // 基のモータのデータを追加
             std::vector<dxl_motor_sync_moves> move_data;
             move_data.push_back({motor.motor_id_, position});
             for (auto &clone_motor : motor.clone_motors)
@@ -55,7 +68,7 @@ void moveArm(dxl_motor &motors)
                     position *= -1.0f;
                 }
                 position = DXL_CENTOR_POSITION + position;
-                //クローン動作のモータを追加
+                // クローン動作のモータを追加
                 move_data.push_back({clone_motor.motor_id_, position});
             }
             motors.setSyncGoalPosition(move_data);
@@ -85,15 +98,43 @@ ResultPosition calcForwardKinematics()
         throw std::runtime_error("robot_arm is not initialized!");
     }
     ResultPosition result;
+    result.x.push_back(0); //原点
+    result.y.push_back(0); //原点
+    result.z.push_back(0); //原点
     Eigen::Matrix4d res = Eigen::Matrix4d::Identity();
     for (auto &motor : *robot_arm)
     {
-        res *= motor.getTransformMatrix();
+        auto tf = motor.getTransformMatrix();
+        res *= tf;
         result.x.push_back(res(0, 3));
         result.y.push_back(res(1, 3));
         result.z.push_back(res(2, 3));
+        std::cout << "*** motor id " << (uint16_t)(motor.motor_id_) << " ***" << std::endl;
+        std::cout << tf << std::endl;
+        std::cout << "--------------------------" << std::endl;
+        std::cout << res << std::endl;
     }
+    std::cout << "^^^ result ^^^" << std::endl;
     std::cout << res << std::endl;
+    std::cout << "||| octave data |||" << std::endl;
+    std::cout << "x = [";
+    for (auto &x : result.x)
+    {
+        std::cout << x << " ";
+    }
+    std::cout << "];" << std::endl;
+    std::cout << "y = [";
+    for (auto &y : result.y)
+    {
+        std::cout << y << " ";
+    }
+    std::cout << "];" << std::endl;
+    std::cout << "z = [";
+    for (auto &z : result.z)
+    {
+        std::cout << z << " ";
+    }
+    std::cout << "];" << std::endl;
     return result;
 }
 
