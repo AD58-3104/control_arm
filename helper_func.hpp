@@ -34,9 +34,10 @@ void plotArm(const ResultPosition data){
     << std::endl << "zlabel('z');"
     << std::endl << "xlim([-100 100]);"
     << std::endl << "% ylim([-5 10]);"
-    << std::endl << "plot(y,z,'-o');";
+    << std::endl << "plot(y,z,'-o');"
+    ;
     ofs.close();
-    std::system("octave --persist pltarm.m");
+    std::system("octave --persist pltarm.m > /dev/null 2>&1");
 
     return;
 }
