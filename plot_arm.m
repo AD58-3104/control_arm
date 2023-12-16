@@ -13,3 +13,5 @@ ylabel('y');
 zlabel('z');
 xlim([-100 100]);
 % ylim([-5 10]);
+
+inp = input('Press any key to finish...','s');
