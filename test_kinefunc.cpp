@@ -6,14 +6,15 @@
 
 using namespace sciplot;
 using namespace Eigen;
+constexpr double maenohou_len = 22.5+190+66.5;
 int main(int argc, char const *argv[])
 {
     auto ptr = createRobotArm();
-    ptr->at(1).setJointAngle( M_PI / 12); //id2の回転
+    ptr->at(1).setJointAngle( M_PI / 10); //id2の回転
     ptr->at(2).setJointAngle( M_PI / 12);  //id3の回転
     auto result = calcForwardKinematics();
-    plotArm(result);
-    auto degs = calcInverseKinematics({0, 22.5+190+66.5, 24});
+    // plotArm(result);
+    auto degs = calcInverseKinematics({0,maenohou_len + 70 , 24});
     setAllJointAngle(degs);
     result = calcForwardKinematics();
     plotArm(result);
@@ -25,5 +26,12 @@ int main(int argc, char const *argv[])
         std::cout << "index " << index<< "::"<< deg << std::endl;
         index++;
     }
+    for(size_t ind = 0;ind < result.z.size();ind++){
+        if(result.z[ind] < 0){
+            std::cout << "[Error]: z is minus on link "<< ind << " !!!!!" << std::endl;
+        }
+        ind++;
+    }
+    result.print();
     return 0;
 }

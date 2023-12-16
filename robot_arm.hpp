@@ -102,6 +102,24 @@ struct ResultPosition
     {
         return Eigen::Vector3d(x[index], y[index], z[index]);
     }
+    void print(){
+        std::cout << "x: ";
+        for(auto &data: x){
+            std::cout << data << ", ";
+        }
+        std::cout << std::endl;
+        std::cout << "y: ";
+        for(auto &data: y){
+            std::cout << data << ", ";
+        }
+        std::cout << std::endl;
+        std::cout << "z: ";
+        for(auto &data: z){
+            std::cout << data << ", ";
+        }
+        std::cout << std::endl;
+    
+    }
 };
 
 ResultPosition calcForwardKinematics(bool print = false)
@@ -160,7 +178,7 @@ void setAllJointAngle(const std::vector<double> joint_angles)
  * @return std::vector<double> 各関節角度(degree)
  * 多分本番と回転の向きが逆だ！！！！！
  */
-constexpr double error_threshold = 10.0f;
+constexpr double error_threshold = 5.0f;
 std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
 {
     if (robot_arm == nullptr)
@@ -182,7 +200,7 @@ std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
     std::vector<double> result(arm_size, 0.0f);
     for (size_t iterate = 0; iterate < 100000; iterate++)
     {
-        for (size_t index = arm_size; 1 < index; index--) //根元は計算しないので、1までしか対象に入れない
+        for (size_t index = arm_size; 1 < index; index--) //根元は計算しないので、1までしか対象に入れない.ここは1 < である必要あり。何故かというと、Fkineが原点の0,0,0を返してしまうからそれを計算しないようにするため。
         {
             auto res = calcForwardKinematics();
             auto link_end = res.getEndPositionVec();
@@ -190,11 +208,12 @@ std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
             auto target_link_vec = link_end - target_link;
             auto origin_link_vec = target_position - target_link;
             double target_angle = acos(target_link_vec.dot(origin_link_vec) / (target_link_vec.norm() * origin_link_vec.norm()));
-            auto nanka = target_link_vec.cross(origin_link_vec);
-            // std::cout << "nanka: " << nanka << std::endl;
-            if(nanka(0) >= 0)
+            auto muki = target_link_vec.cross(origin_link_vec).normalized();
+            // std::cout << "muki: " << muki << std::endl;
+            //回転の軸を決める
+            if(muki(0) >= 0)
             {
-                target_angle *= -1.0f;
+                target_angle *= -1.0f;  //zの回転軸が自分が最初設定したつもりのものと逆だったのでx方向へのプラスのベクトルで逆回転になる。
             }
             getRobotArm()->at(index -1).setJointAngle(convertToDegree(target_angle));
             result[index - 1] = target_angle;
