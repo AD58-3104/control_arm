@@ -28,9 +28,9 @@ struct StraightChainRobotModel
 {
     std::list<StraightChainRobotModel> clone_motors;
     // DH記法で表現.
-    const Eigen::Vector3d x_link_length_; // x,y,z [mm]
+    Eigen::Vector3d x_link_length_; // x,y,z [mm]
     Eigen::Matrix4d x_link_rotate_;       // ZYXオイラー角 [rad]
-    const Eigen::Vector3d z_link_length_;
+    Eigen::Vector3d z_link_length_;
     Eigen::Matrix4d z_link_rotate_;
     double joint_angle_; // [rad]
     bool does_reverse_;  // 1 or -1
@@ -70,6 +70,12 @@ struct StraightChainRobotModel
     {
         assert(motor.motor_id_ != motor_id_ + clone_id_offset); // idが間違っている
         clone_motors.push_back(motor);
+        return;
+    }
+
+    void setYoffset(const double y_offset)
+    {
+        x_link_length_(1,0) = y_offset;
         return;
     }
 

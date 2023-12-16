@@ -26,6 +26,7 @@ arm_shared_ptr_t createRobotArm()
     // 次のリンク
     // ここyへの22.5も足さなくてはいけない...。どうしよう
     robot_arm->push_back(StraightChainRobotModel(3, 195, Eigen::Vector3d(0, 0, 0), 0, Eigen::Vector3d(0, 0, M_PI / 2)));
+    robot_arm->back().setYoffset(22.5); //だいぶ小手先だが仕方ない...
     // 次のリンク
     robot_arm->push_back(StraightChainRobotModel(4, 190, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     // 手先のリンク
