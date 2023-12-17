@@ -6,6 +6,7 @@
 #include <barrier>
 #include <memory>
 #include <future>
+#include <optional>
 
 using arm_shared_ptr_t = std::shared_ptr<std::vector<StraightChainRobotModel>>;
 
@@ -31,6 +32,7 @@ arm_shared_ptr_t createRobotArm()
     robot_arm->push_back(StraightChainRobotModel(4, 190, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     // 手先のリンク
     robot_arm->push_back(StraightChainRobotModel(5, 66.5, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    robot_arm->push_back(StraightChainRobotModel(5, 20, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     return robot_arm;
 }
 
@@ -103,21 +105,22 @@ struct ResultPosition
         return Eigen::Vector3d(x[index], y[index], z[index]);
     }
     void print(){
+        std::cout << "^^^ ResultPosition  ^^^\n";
         std::cout << "x: ";
         for(auto &data: x){
             std::cout << data << ", ";
         }
-        std::cout << std::endl;
+        std::cout << "\n";
         std::cout << "y: ";
         for(auto &data: y){
             std::cout << data << ", ";
         }
-        std::cout << std::endl;
+        std::cout << "\n";
         std::cout << "z: ";
         for(auto &data: z){
             std::cout << data << ", ";
         }
-        std::cout << std::endl;
+        std::cout << "\n";
     
     }
 };
@@ -129,17 +132,17 @@ ResultPosition calcForwardKinematics(bool print = false)
         throw std::runtime_error("robot_arm is not initialized!");
     }
     ResultPosition result;
-    result.x.push_back(0); // 原点
-    result.y.push_back(0); // 原点
-    result.z.push_back(0); // 原点
+    result.x.emplace_back(0); // 原点
+    result.y.emplace_back(0); // 原点
+    result.z.emplace_back(0); // 原点
     Eigen::Matrix4d res = Eigen::Matrix4d::Identity();
     for (auto &motor : *robot_arm)
     {
         auto tf = motor.getTransformMatrix();
         res *= tf;
-        result.x.push_back(res(0, 3));
-        result.y.push_back(res(1, 3));
-        result.z.push_back(res(2, 3));
+        result.x.emplace_back(res(0, 3));
+        result.y.emplace_back(res(1, 3));
+        result.z.emplace_back(res(2, 3));
         if (print)
         {
             std::cout << "*** motor id " << (uint16_t)(motor.motor_id_) << " ***" << std::endl;
@@ -156,6 +159,10 @@ ResultPosition calcForwardKinematics(bool print = false)
     return result;
 }
 
+/**
+ * @brief Set the All Joint Angle object
+ * @param joint_angles 各関節角度　[rad]
+ */
 void setAllJointAngle(const std::vector<double> joint_angles)
 {
     assert(robot_arm != nullptr); // robot_armが初期化されていない
@@ -175,12 +182,15 @@ void setAllJointAngle(const std::vector<double> joint_angles)
 /**
  * @brief 与えられた目標位置に対するアームの逆運動学を解く
  * @param target_position 目標位置(x,y)
- * @return std::vector<double> 各関節角度(degree)
+ * @return std::vector<double> 各関節角度[degree]
+ * @warning これを実行すると内部で関節の状態を変更してしまうので注意
  * 多分本番と回転の向きが逆だ！！！！！
  */
 constexpr double error_threshold = 5.0f;
-std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
+std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d target_position)
 {
+    std::ios_base::sync_with_stdio(false);
+    std::cin.tie(0);
     if (robot_arm == nullptr)
     {
         throw std::runtime_error("robot_arm is not initialized!");
@@ -194,11 +204,12 @@ std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
         }
         return result;
     };
-    auto convertToDegree = [](const double rad_data) {
-        return rad_data * 180 / M_PI;
-    };
+    double minimum_error_norm = 765876346315283;
+    bool solved = false;
     std::vector<double> result(arm_size, 0.0f);
-    for (size_t iterate = 0; iterate < 100000; iterate++)
+    ResultPosition pos_finally;
+    size_t iterate = 0;
+    for (iterate = 0; iterate < 100; iterate++)
     {
         for (size_t index = arm_size; 1 < index; index--) //根元は計算しないので、1までしか対象に入れない.ここは1 < である必要あり。何故かというと、Fkineが原点の0,0,0を返してしまうからそれを計算しないようにするため。
         {
@@ -215,7 +226,7 @@ std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
             {
                 target_angle *= -1.0f;  //zの回転軸が自分が最初設定したつもりのものと逆だったのでx方向へのプラスのベクトルで逆回転になる。
             }
-            getRobotArm()->at(index -1).setJointAngle(convertToDegree(target_angle));
+            getRobotArm()->at(index -1).setJointAngle(target_angle);
             result[index - 1] = target_angle;
             // std::cout << "index: " << index - 1 << std::endl;
             // std::cout << "target_angle: " << target_angle * 180 /M_PI << std::endl;
@@ -224,18 +235,41 @@ std::vector<double> calcInverseKinematics(const Eigen::Vector3d target_position)
         auto res = calcForwardKinematics();
         auto link_end = res.getEndPositionVec();
         auto error = target_position - link_end;
-        if(error.norm() < error_threshold)
+        if(std::abs(minimum_error_norm - error.norm()) < 0.1f){
+            //更新が無い場合
+            solved = false;
+            break;
+        }
+        minimum_error_norm = std::min(minimum_error_norm,error.norm());
+        if(minimum_error_norm < error_threshold)
         {
-            std::cout << "Loop count: " << iterate << std::endl;
-            std::cout << "OK error is small!!  " << std::endl;
+            std::cout << "Loop count: " << iterate << "\n";
+            std::cout << "[Target vector] " << target_position.transpose() << "\n";
+            std::cout << "[End link vector] " << link_end.transpose() << "\n";
+            std::cout << "OK error is small!!  " << "\n";
+            solved = true;
+            if(iterate > 200){
+                throw std::runtime_error("めちゃ時間かかってるね！！！");
+            }
             break;
         }
     }
-    for (auto &data : result)
-    {
-        data = data * 180 / M_PI; // degreeに変換してから返す
+    std::cout << "----------- [Inverse kinematics Result] -----------" << "\n";
+    std::cout << "[Target position] :: " << target_position.transpose()  << "\n";
+    std::cout << "[Loop count] :: " << iterate << "\n";
+    std::cout <<  "[Minimum error norm] :: " << minimum_error_norm << "\n";
+    pos_finally.print();
+    std::cout << "[Joint degrees] " ;
+    for(const auto deg:result){
+        std::cout << deg << "\n";
     }
-    return result;
+    
+    if(solved){
+        return convertToDegreeContainer(result);
+    }
+    else{
+        return std::nullopt;
+    }
 }
 
 #endif // !ROBOT_ARM_HPP

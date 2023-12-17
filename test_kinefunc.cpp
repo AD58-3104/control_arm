@@ -6,32 +6,69 @@
 
 using namespace sciplot;
 using namespace Eigen;
-constexpr double maenohou_len = 22.5+190+66.5;
+constexpr double maenohou_len = 22.5 + 190 + 66.5;
 int main(int argc, char const *argv[])
 {
+    Eigen::Vector3d target_pos{0,0,0};
+    if(argc == 3){
+        std::string y(argv[1]);
+        std::string z(argv[2]);
+        target_pos(1) = std::stod(y);
+        target_pos(2) = std::stod(z);
+    }
+    else if(argc == 2){
+        auto rand = getRandomJointDegree(2);
+        target_pos(1) = rand[0] * 360.f / M_PI;
+        target_pos(2) = 30;
+    }
+    else{
+        target_pos(0) = 0;
+        target_pos(1) = maenohou_len + 70;
+        target_pos(2) = 20;
+    }
     auto ptr = createRobotArm();
-    ptr->at(1).setJointAngle( M_PI / 10); //id2の回転
-    ptr->at(2).setJointAngle( M_PI / 12);  //id3の回転
-    auto result = calcForwardKinematics();
-    // plotArm(result);
-    auto degs = calcInverseKinematics({0,maenohou_len + 70 , 24});
-    setAllJointAngle(degs);
-    result = calcForwardKinematics();
-    plotArm(result);
+    ResultPosition result;
+    std::vector<double> degs;
+    size_t yarinaoshi_count = 0;
+    constexpr size_t yarinaoshi_threshould = 10000;
+    auto checkYZisnotMinus = [](const ResultPosition& pos) -> bool {
+        for (size_t ind = 0; ind < pos.z.size(); ind++)
+        {
+            if (pos.z[ind] < -0.1) //誤差考慮
+            {
+                // std::cout << "[Error]: z is minus on link " << ind << " !!!!!" << std::endl;
+                return false;
+            }
+            if(pos.y[ind] < -0.1){ //誤差考慮
+                return false;
+            }
+            ind++;
+        }
+        return true;
+    };
+    while (true)
+    {
+        auto joi = getRandomJointDegree(ptr->size());
+        joi[0] = 0;//根元の回転はしてほしくないので0にする
+        setAllJointAngle(joi); //ランダムな初期姿勢を設定
+        auto solution = calcInverseKinematics(target_pos);
+        if(solution.has_value()){
+            result = calcForwardKinematics();
+            if(checkYZisnotMinus(result)){
+                break;
+            }
+        }
+        yarinaoshi_count++;
+        if(yarinaoshi_count > yarinaoshi_threshould){
+            std::cerr << "<<<<< Cannot solve problem!!! >>>>> " << std::endl;
+            return 1;
+        }
+    }
+    std::cout << "------------- [Calculation is finished] -------------" << std::endl;
     std::cout << "--- End position ---" << std::endl;
     std::cout << result.getEndPositionVec().transpose() << std::endl;
-    size_t index = 0;
-    for (const auto &deg : degs)
-    {
-        std::cout << "index " << index<< "::"<< deg << std::endl;
-        index++;
-    }
-    for(size_t ind = 0;ind < result.z.size();ind++){
-        if(result.z[ind] < 0){
-            std::cout << "[Error]: z is minus on link "<< ind << " !!!!!" << std::endl;
-        }
-        ind++;
-    }
     result.print();
+    std::cout << "[yarinaoshi_count] :" << yarinaoshi_count << std::endl;
+    plotArm(result);
     return 0;
 }
