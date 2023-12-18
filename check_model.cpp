@@ -16,19 +16,17 @@ int main(int argc, char const *argv[])
     // ptr->at(1).setJointAngle(M_PI/4);
     ptr->at(1).setJointAngle(M_PI/8.0f);
     plot2darm(true);
-    // ptr = createRobotArm();
+    ptr = createRobotArm();
     ptr->at(2).setJointAngle(M_PI/8.0f);
-    auto degs = getJointAngleParam();
-    printContainer(degs,"[joint param degs] ");
     plot2darm(true);
-    // ptr = createRobotArm();
+    ptr = createRobotArm();
     ptr->at(3).setJointAngle(M_PI/8.0f);
     plot2darm(true);
-    // ptr = createRobotArm();
+    ptr = createRobotArm();
     ptr->at(4).setJointAngle(M_PI/8.0f);
     plot2darm(true);
     auto res = calcForwardKinematics();
-    degs = getJointAngleParam();
+    auto degs = getJointAngleParam();
     printContainer(degs,"[joint param degs] ");
     return 0;
 }
@@ -37,7 +35,7 @@ int main(int argc, char const *argv[])
  * 回転方向メモ
  * id 1 = そもそも軸が違うので今回関係なし
  * id 2 = 下     id2は一番最初のx軸回転
- * id 3 = 上     ここは恐らく回転方向は同じ。90度が足せていないのが原因...
+ * id 3 = 下     90度が足せていないのが原因だった！！回転方向を同じにできた！
  * id 4 = 下
  * id 5 = ? //不明
  * 
