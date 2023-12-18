@@ -323,7 +323,7 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
             {
                 target_angle *= -1.0f; // zの回転軸が自分が最初設定したつもりのものと逆だったのでx方向へのプラスのベクトルで逆回転になる。
             }
-            getRobotArm()->at(index - 1).setJointAngle(target_angle);
+            getRobotArm()->at(index - 1).setRelativeJointAngle(target_angle);
             result[index - 1] = target_angle * -1.0f;
             // std::cout << "index: " << index - 1 << std::endl;
             // std::cout << "target_angle: " << target_angle * 180 /M_PI << std::endl;

@@ -87,6 +87,11 @@ struct StraightChainRobotModel
         return;
     }
 
+    /**
+     * @brief 多分これ使ったら壊れます！！！！！！！！！！！
+     * 
+     * @param does_reverse 使うな！！！！！！！！！！！
+     */
     void setReverse(const bool does_reverse)
     {
         does_reverse_ = does_reverse;
