@@ -84,10 +84,10 @@ void moveArm(dxl_motor &motors)
     for (auto &motor : *robot_arm)
     {
         int16_t position = motor.joint_angle_ * 180 / M_PI; // ラジアンから戻す
-        if (motor.does_reverse_)
-        {
-            position *= -1.0f;
-        }
+        // if (motor.does_reverse_)
+        // {
+        //     position *= -1.0f;    //setJointAngleの方で逆にした
+        // }
         uint16_t raw_dxl_position = std::max(DXL_CENTOR_POSITION + position, 0);
         std::cout << "[move data] raw dxl = " << raw_dxl_position << std::endl;
         // クローン動作のモータがある場合
