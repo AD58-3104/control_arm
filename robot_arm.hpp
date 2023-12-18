@@ -7,6 +7,34 @@
 #include <memory>
 #include <future>
 #include <optional>
+#include <ctime>
+#include <random>
+
+#include <sciplot/sciplot.hpp>
+#include <fstream>
+#include <vector>
+#include <ctime>
+
+/**
+ * @brief Get the Random Joint Degree object
+ * @param num 生成する個数
+ * @return std::vector<double>　角度[rad]
+ */
+std::vector<double> getRandomJointDegree(const size_t num)
+{
+    std::vector<double> result{};
+    std::random_device seed_gen("/dev/random");
+    std::mt19937 engine(seed_gen());
+    std::uniform_real_distribution<> dist(0, 360);
+    std::cout << "random joint degree:";
+    for (size_t i = 0; i < num; i++)
+    {
+        result.push_back(dist(engine) * M_PI / 360.0f);
+        std::cout << "," << result[i];
+    }
+    std::cout << std::endl;
+    return result;
+}
 
 using arm_shared_ptr_t = std::shared_ptr<std::vector<StraightChainRobotModel>>;
 
@@ -32,7 +60,7 @@ arm_shared_ptr_t createRobotArm()
     robot_arm->push_back(StraightChainRobotModel(4, 190, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     // 手先のリンク
     robot_arm->push_back(StraightChainRobotModel(5, 66.5, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
-    robot_arm->push_back(StraightChainRobotModel(5, 20, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    // robot_arm->push_back(StraightChainRobotModel(5, 60, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     return robot_arm;
 }
 
@@ -55,34 +83,31 @@ void moveArm(dxl_motor &motors)
     }
     for (auto &motor : *robot_arm)
     {
-        uint16_t position = motor.joint_angle_ * 180 / M_PI; // 取り敢えずラジアン
+        int16_t position = motor.joint_angle_ * 180 / M_PI; // ラジアンから戻す
         if (motor.does_reverse_)
         {
             position *= -1.0f;
         }
-        position = DXL_CENTOR_POSITION + position;
+        uint16_t raw_dxl_position = std::max(DXL_CENTOR_POSITION + position, 0);
+        std::cout << "[move data] raw dxl = " << raw_dxl_position << std::endl;
         // クローン動作のモータがある場合
         if (!motor.clone_motors.empty())
         {
             // 基のモータのデータを追加
             std::vector<dxl_motor_sync_moves> move_data;
-            move_data.push_back({motor.motor_id_, position});
+            move_data.push_back({motor.motor_id_, raw_dxl_position});
             for (auto &clone_motor : motor.clone_motors)
             {
-                uint16_t position = motor.joint_angle_ * 180 / M_PI; // 取り敢えずラジアン
-                if (motor.does_reverse_)
-                {
-                    position *= -1.0f;
-                }
-                position = DXL_CENTOR_POSITION + position;
+                uint16_t raw_dxl_position_clone = DXL_CENTOR_POSITION + -1.0f * position;
                 // クローン動作のモータを追加
-                move_data.push_back({clone_motor.motor_id_, position});
+                move_data.push_back({clone_motor.motor_id_, raw_dxl_position_clone});
+                std::cout << "[move data] raw dxl clone = " << raw_dxl_position_clone << std::endl;
             }
             motors.setSyncGoalPosition(move_data);
         }
         else
         {
-            motors.setGoalPosition(motor.motor_id_, position);
+            motors.setGoalPosition(motor.motor_id_, raw_dxl_position);
         }
     }
     return;
@@ -104,28 +129,96 @@ struct ResultPosition
     {
         return Eigen::Vector3d(x[index], y[index], z[index]);
     }
-    void print(){
+    void print()
+    {
         std::cout << "^^^ ResultPosition  ^^^\n";
         std::cout << "x: ";
-        for(auto &data: x){
+        for (auto &data : x)
+        {
             std::cout << data << ", ";
         }
         std::cout << "\n";
         std::cout << "y: ";
-        for(auto &data: y){
+        for (auto &data : y)
+        {
             std::cout << data << ", ";
         }
         std::cout << "\n";
         std::cout << "z: ";
-        for(auto &data: z){
+        for (auto &data : z)
+        {
             std::cout << data << ", ";
         }
         std::cout << "\n";
-    
     }
 };
 
-ResultPosition calcForwardKinematics(bool print = false)
+void plotArm(const ResultPosition data)
+{
+    std::ofstream ofs("pltarm.m");
+    ofs << "x = [";
+    for (auto &x : data.x)
+    {
+        ofs << x << " ";
+    }
+    ofs << "];" << std::endl;
+    ofs << "y = [";
+    for (auto &y : data.y)
+    {
+        ofs << y << " ";
+    }
+    ofs << "];" << std::endl;
+    ofs << "z = [";
+    for (auto &z : data.z)
+    {
+        ofs << z << " ";
+    }
+    ofs << "];" << std::endl;
+    ofs
+        << std::endl
+        << "grid on;"
+        << std::endl
+        << "plot3(x,y,z,'-o');"
+        << std::endl
+        << "title('My Plot');"
+        << std::endl
+        << "xlabel('x');"
+        << std::endl
+        << "ylabel('y');"
+        << std::endl
+        << "zlabel('z');"
+        << std::endl
+        << "xlim([-100 100]);"
+        << std::endl
+        << "% ylim([-5 10]);"
+        // << std::endl << "plot(y,z,'-o');"
+        // << std::endl << "ylabel('y');zlabel('z');"
+        ;
+    ofs.close();
+    std::system("octave --persist pltarm.m > /dev/null 2>&1");
+
+    return;
+}
+
+ResultPosition calcForwardKinematics(bool print = false);
+
+void plot2darm(){
+    using namespace sciplot;
+    auto result = calcForwardKinematics();
+    Plot2D plot2d;
+    plot2d.legend().hide();
+    plot2d.xlabel("x");
+    plot2d.ylabel("y");
+    plot2d.xrange(0.f, 500.f);
+    plot2d.yrange(0.f, 500.f);
+    plot2d.drawWithVecs("linespoints", result.y, result.z).lineColor("red");
+    Figure fig2d = {{plot2d}};
+    Canvas canvas2d = {{fig2d}};
+    canvas2d.show();
+    return;
+}
+
+ResultPosition calcForwardKinematics(bool print)
 {
     if (robot_arm == nullptr)
     {
@@ -182,7 +275,7 @@ void setAllJointAngle(const std::vector<double> joint_angles)
 /**
  * @brief 与えられた目標位置に対するアームの逆運動学を解く
  * @param target_position 目標位置(x,y)
- * @return std::vector<double> 各関節角度[degree]
+ * @return std::vector<double> 各関節角度[rad]
  * @warning これを実行すると内部で関節の状態を変更してしまうので注意
  * 多分本番と回転の向きが逆だ！！！！！
  */
@@ -196,7 +289,8 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
         throw std::runtime_error("robot_arm is not initialized!");
     }
     const size_t arm_size = getRobotArm()->size();
-    auto convertToDegreeContainer = [](const std::vector<double> rad_data) {
+    auto convertToDegreeContainer = [](const std::vector<double> rad_data)
+    {
         std::vector<double> result;
         for (auto &data : rad_data)
         {
@@ -211,7 +305,7 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
     size_t iterate = 0;
     for (iterate = 0; iterate < 100; iterate++)
     {
-        for (size_t index = arm_size; 1 < index; index--) //根元は計算しないので、1までしか対象に入れない.ここは1 < である必要あり。何故かというと、Fkineが原点の0,0,0を返してしまうからそれを計算しないようにするため。
+        for (size_t index = arm_size; 1 < index; index--) // 根元は計算しないので、1までしか対象に入れない.ここは1 < である必要あり。何故かというと、Fkineが原点の0,0,0を返してしまうからそれを計算しないようにするため。
         {
             auto res = calcForwardKinematics();
             auto link_end = res.getEndPositionVec();
@@ -221,13 +315,13 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
             double target_angle = acos(target_link_vec.dot(origin_link_vec) / (target_link_vec.norm() * origin_link_vec.norm()));
             auto muki = target_link_vec.cross(origin_link_vec).normalized();
             // std::cout << "muki: " << muki << std::endl;
-            //回転の軸を決める
-            if(muki(0) >= 0)
+            // 回転の軸を決める
+            if (muki(0) >= 0)
             {
-                target_angle *= -1.0f;  //zの回転軸が自分が最初設定したつもりのものと逆だったのでx方向へのプラスのベクトルで逆回転になる。
+                target_angle *= -1.0f; // zの回転軸が自分が最初設定したつもりのものと逆だったのでx方向へのプラスのベクトルで逆回転になる。
             }
-            getRobotArm()->at(index -1).setJointAngle(target_angle);
-            result[index - 1] = target_angle;
+            getRobotArm()->at(index - 1).setJointAngle(target_angle);
+            result[index - 1] = target_angle * -1.0f;
             // std::cout << "index: " << index - 1 << std::endl;
             // std::cout << "target_angle: " << target_angle * 180 /M_PI << std::endl;
             // setAllJointAngle(convertToDegree(result));
@@ -235,41 +329,141 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
         auto res = calcForwardKinematics();
         auto link_end = res.getEndPositionVec();
         auto error = target_position - link_end;
-        if(std::abs(minimum_error_norm - error.norm()) < 0.1f){
-            //更新が無い場合
+        if (std::abs(minimum_error_norm - error.norm()) < 0.1f)
+        {
+            // 更新が無い場合
             solved = false;
             break;
         }
-        minimum_error_norm = std::min(minimum_error_norm,error.norm());
-        if(minimum_error_norm < error_threshold)
+        minimum_error_norm = std::min(minimum_error_norm, error.norm());
+        if (minimum_error_norm < error_threshold)
         {
             std::cout << "Loop count: " << iterate << "\n";
             std::cout << "[Target vector] " << target_position.transpose() << "\n";
             std::cout << "[End link vector] " << link_end.transpose() << "\n";
-            std::cout << "OK error is small!!  " << "\n";
+            std::cout << "OK error is small!!  "
+                      << "\n";
             solved = true;
-            if(iterate > 200){
+            if (iterate > 200)
+            {
                 throw std::runtime_error("めちゃ時間かかってるね！！！");
             }
             break;
         }
     }
-    std::cout << "----------- [Inverse kinematics Result] -----------" << "\n";
-    std::cout << "[Target position] :: " << target_position.transpose()  << "\n";
+    std::cout << "----------- [Inverse kinematics Result] -----------"
+              << "\n";
+    std::cout << "[Target position] :: " << target_position.transpose() << "\n";
     std::cout << "[Loop count] :: " << iterate << "\n";
-    std::cout <<  "[Minimum error norm] :: " << minimum_error_norm << "\n";
+    std::cout << "[Minimum error norm] :: " << minimum_error_norm << "\n";
     pos_finally.print();
-    std::cout << "[Joint degrees] " ;
-    for(const auto deg:result){
+    std::cout << "[Joint degrees] ";
+    for (const auto deg : result)
+    {
         std::cout << deg << "\n";
     }
-    
-    if(solved){
-        return convertToDegreeContainer(result);
+
+    if (solved)
+    {
+        return result;
     }
-    else{
+    else
+    {
         return std::nullopt;
     }
+}
+
+bool checkYZisnotMinus(const ResultPosition &pos)
+{
+    for (size_t ind = 0; ind < pos.z.size(); ind++)
+    {
+        if (pos.z[ind] < -0.1) // 誤差考慮
+        {
+            return false;
+        }
+        if (pos.y[ind] < -0.1)
+        { // 誤差考慮
+            return false;
+        }
+        ind++;
+    }
+    return true;
+}
+
+std::vector<double> getJointAngle()
+{
+    std::vector<double> result;
+    std::cout << "[getJointAngle]\nraw joint angle ";
+    for (auto &motor : *robot_arm)
+    {
+        std::cout << motor.joint_angle_ * 180.f / M_PI<< ", ";
+    }
+    std::cout << std::endl;
+    auto links = calcForwardKinematics();
+    std::cout << "Local joint angle ";
+    for (size_t index = 1; index < links.x.size() - 2; index++)
+    {
+        Eigen::Vector3d first_link = links.getPositionVec(index + 1)  - links.getPositionVec(index);
+        Eigen::Vector3d second_link = links.getPositionVec(index + 2) - links.getPositionVec(index + 1);
+        double target_angle = acos(second_link.dot(first_link) / (second_link.norm() * first_link.norm()));
+        result.push_back(target_angle);
+        std::cout << target_angle * 180.f / M_PI << ", ";
+    }
+    std::cout << std::endl;
+    links.print();
+    return result;
+}
+
+
+/**
+ * @brief CCDで逆運動学を解くが、初期姿勢をランダムにして繰り返す処理もやる
+ * 
+ * @param target_pos 目標位置
+ * @return std::optional<std::vector<double>> 解けた場合は各関節角度 [rad]
+ */
+std::optional<std::vector<double>> solveCCDINV(const Eigen::Vector3d target_pos)
+{
+    ResultPosition result;
+    std::vector<double> degs;
+    size_t yarinaoshi_count = 0;
+    constexpr size_t yarinaoshi_threshould = 10000;
+    std::optional<std::vector<double>> solution;
+    while (true)
+    {
+        auto joi = getRandomJointDegree(getRobotArm()->size());
+        joi[0] = 0;            // 根元の回転はしてほしくないので0にする
+        setAllJointAngle(joi); // ランダムな初期姿勢を設定
+        solution = calcInverseKinematics(target_pos);
+        if (solution.has_value())
+        {
+            result = calcForwardKinematics();
+            if (checkYZisnotMinus(result))
+            {
+                break;
+            }
+        }
+        yarinaoshi_count++;
+        if (yarinaoshi_count > yarinaoshi_threshould)
+        {
+            std::cerr << "<<<<< Cannot solve problem!!! >>>>> " << std::endl;
+            return std::nullopt;
+        }
+    }
+    std::cout << "------------- [Calculation is finished] -------------" << std::endl;
+    std::cout << "--- End position ---" << std::endl;
+    std::cout << result.getEndPositionVec().transpose() << std::endl;
+    result.print();
+    std::cout << "[yarinaoshi_count] :" << yarinaoshi_count << std::endl;
+    if (solution.has_value())
+    {
+        std::cout << "[CCD solution degrees] :";
+        for (auto &deg : solution.value())
+        {
+            std::cout << deg * 180.0f / M_PI << ", ";
+        }
+        std::cout << std::endl;
+    }
+    return solution;
 }
 
 #endif // !ROBOT_ARM_HPP

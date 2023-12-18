@@ -19,8 +19,8 @@ const char *DEVICENAME = "/dev/ttyUSB0";
 
 constexpr uint8_t TORQUE_ENABLE = 1;                  // Value for enabling the torque
 constexpr uint8_t TORQUE_DISABLE = 0;                 // Value for disabling the torque
-constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 100;  // 稼働範囲の下限 //事故りそうなので最初は小さくする
-constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 1000; // 可動範囲の上限
+constexpr uint16_t DXL_MINIMUM_POSITION_VALUE = 0;  // 稼働範囲の下限 //事故りそうなので最初は小さくする
+constexpr uint16_t DXL_MAXIMUM_POSITION_VALUE = 300; // 可動範囲の上限
 constexpr uint8_t DXL_MOVING_STATUS_THRESHOLD = 10;   // 位置の誤差の閾値
 
 constexpr double DXL_POSITION_RESOLUTION = 1024.0f / 300.0f;
@@ -167,7 +167,8 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
 
     if (goal_position < DXL_MINIMUM_POSITION_VALUE || goal_position > DXL_MAXIMUM_POSITION_VALUE)
     {
-        throw std::runtime_error("Goal position is out of movable range!\n");
+        std::string deg_str = std::to_string(goal_position);
+        throw std::runtime_error("Goal position is out of movable range! = " + deg_str + "[deg]");
     }
 
     const uint16_t goal_position_raw = goal_position * DXL_POSITION_RESOLUTION;
@@ -186,6 +187,7 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
     }
 
     uint16_t dxl_present_position = 0; // Present position
+    uint32_t print_count = 0;
     do
     {
         // Read present position
@@ -199,8 +201,11 @@ uint16_t dxl_motor::setGoalPosition(const uint8_t id, const uint16_t goal_positi
             printf("%s\n", packetHandler_->getRxPacketError(dxl_error));
         }
 
-        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", id, goal_position_raw, dxl_present_position);
+        if(print_count % 100 == 0){
+            printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", id, goal_position_raw, dxl_present_position);
+        }
         usleep(5000);
+        print_count++;
     } while ((std::abs(goal_position_raw - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
     return dxl_present_position;
 }
@@ -235,17 +240,21 @@ uint16_t dxl_motor::setSyncGoalPosition(const std::vector<dxl_motor_sync_moves> 
     }
     groupSyncWrite.clearParam();
     uint16_t dxl_present_position = 0; // Present position
+    uint32_t print_count = 0;
     do
     {
         // Read present position
-        int dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, move_data[0].id, ADDR_MX_PRESENT_POSITION, &dxl_present_position, nullptr);
+        int dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, move_data[1].id, ADDR_MX_PRESENT_POSITION, &dxl_present_position, nullptr);
         if (dxl_comm_result != COMM_SUCCESS)
         {
             printf("%s\n", packetHandler_->getTxRxResult(dxl_comm_result));
         }
-        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", move_data[0].id, (uint16_t)(move_data[0].goal_position * DXL_POSITION_RESOLUTION), dxl_present_position);
+        if(print_count % 100 == 0){
+            printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", move_data[1].id, (uint16_t)(move_data[1].goal_position * DXL_POSITION_RESOLUTION), dxl_present_position);
+        }
+        print_count++;
         usleep(10000); // 10ms待つ
-    } while ((std::abs(move_data[0].goal_position * DXL_POSITION_RESOLUTION - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
+    } while ((std::abs(move_data[1].goal_position * DXL_POSITION_RESOLUTION - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
     return dxl_present_position;
 }
 

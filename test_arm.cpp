@@ -14,43 +14,29 @@ int main(int argc, char const *argv[])
     motors.addMotorId(3);
     motors.addMotorId(4);
     motors.addMotorId(5);
-    motors.setAllSpeed(250);
+    motors.setAllSpeed(30);   //速度を大分遅くした
     motors.allTorqueEnable(true);
-    sleep(2);
     auto ptr = createRobotArm();
-    auto itr = ptr->begin();
-    itr->setJointAngle(M_PI/10); //根元回転
-    itr++;
-    itr->setJointAngle(M_PI/4); //根元からのリンク回転
-    // itr++;
-    // itr->setJointAngle(-M_PI/8); //id3の回転
-    // itr++;
-    // itr->setJointAngle(-M_PI/3); //id4の回転
-    itr = ptr->end();
-    itr--;
-    itr->setJointAngle(-M_PI/6); //手先の回転
+    sleep(1);
+    ptr->at(0).setJointAngle(0); //手先の回転
+    ptr->at(1).setJointAngle(0); //手先の回転
+    ptr->at(2).setJointAngle(0); //手先の回転
+    ptr->at(3).setJointAngle(0); //手先の回転
+    ptr->at(4).setJointAngle(0); //手先の回転
     moveArm(motors);
-    itr->setJointAngle(-M_PI/12); //手先の回転
-    moveArm(motors);
-    auto result = calcForwardKinematics();
-    sleep(2);
-    Plot3D plot;
-    plot.legend().hide();
-    plot.xlabel("x");
-    plot.ylabel("y");
-    plot.zlabel("z");
-    plot.yrange(-300.f, 300.f);
-    plot.xrange(-100.f, 100.f);
-    plot.zrange(0.0f, 400.f);
-    plot.drawWithVecs("linespoints", result.x, result.y,result.z).lineColor("red");
-    Figure fig = {{plot}};
-    Canvas canvas = {{fig}};
-    // canvas.show();
 
-    // Plot2D plot2d;
-    // plot2d.drawWithVecs("linespoints", result.x, result.y).lineColor("red");
-    // Figure fig2d = {{plot2d}};
-    // Canvas canvas2d = {{fig2d}};
-    // canvas2d.show();
+    Eigen::Vector3d target_pos{0,22.5 + 190 + 66.5,200};
+    auto solution = solveCCDINV(target_pos);
+    auto result = calcForwardKinematics();
+    int ok = -100;
+    std::cout << "if you want to move arm, input number > 765" << std::endl;
+    std::cin >> ok;
+    if(ok > 765){
+        // setAllJointAngle(solution.value());
+        moveArm(motors);
+    }
     return 0;
 }
+
+
+//:0, -28.9323, -45.2895, -73.3168, -146.674, 141.434,
