@@ -38,7 +38,7 @@ std::vector<double> getRandomJointDegree(const size_t num)
 
 using arm_shared_ptr_t = std::shared_ptr<std::vector<StraightChainRobotModel>>;
 
-static arm_shared_ptr_t robot_arm;
+static arm_shared_ptr_t robot_arm = nullptr;
 
 arm_shared_ptr_t createRobotArm()
 {
@@ -223,16 +223,13 @@ void plot2darm(bool reset = false){
 
 ResultPosition calcForwardKinematics(bool print)
 {
-    if (robot_arm == nullptr)
-    {
-        throw std::runtime_error("robot_arm is not initialized!");
-    }
+    auto arm_ptr = getRobotArm();
     ResultPosition result;
     result.x.emplace_back(0); // 原点
     result.y.emplace_back(0); // 原点
     result.z.emplace_back(0); // 原点
     Eigen::Matrix4d res = Eigen::Matrix4d::Identity();
-    for (auto &motor : *robot_arm)
+    for (auto &motor : *arm_ptr)
     {
         auto tf = motor.getTransformMatrix();
         res *= tf;
