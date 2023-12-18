@@ -50,7 +50,7 @@ arm_shared_ptr_t createRobotArm()
     robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 24, Eigen::Vector3d::Zero()));
     // 根元回転
     robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d(0, -M_PI / 2.0, 0), 0, Eigen::Vector3d::Zero()));
-    // id2のクローン. リバースがtrue
+    // id2のクローン.
     robot_arm->back().clone_motors.push_back(StraightChainRobotModel(2 + clone_id_offset, true));
     // 次のリンク
     // ここyへの22.5も足さなくてはいけない...。どうしよう
@@ -202,10 +202,13 @@ void plotArm(const ResultPosition data)
 
 ResultPosition calcForwardKinematics(bool print = false);
 
-void plot2darm(){
+void plot2darm(bool reset = false){
     using namespace sciplot;
     auto result = calcForwardKinematics();
-    Plot2D plot2d;
+    static Plot2D plot2d;
+    if(reset){
+        plot2d.clear();
+    }
     plot2d.legend().hide();
     plot2d.xlabel("x");
     plot2d.ylabel("y");
@@ -390,11 +393,15 @@ bool checkYZisnotMinus(const ResultPosition &pos)
     return true;
 }
 
-std::vector<double> getJointAngle()
+/**
+ * @brief 順運動学の結果からベクトル同士で各関節の角度を計算する
+ * @return std::vector<double> 
+ */
+std::vector<double> getCalcJointAngle()
 {
     std::vector<double> result;
     std::cout << "[getJointAngle]\nraw joint angle ";
-    for (auto &motor : *robot_arm)
+    for (auto &motor : *getRobotArm())
     {
         std::cout << motor.joint_angle_ * 180.f / M_PI<< ", ";
     }
@@ -413,6 +420,20 @@ std::vector<double> getJointAngle()
     links.print();
     return result;
 }
+
+/**
+ * @brief 今設定されている関節角度を取得する
+ * @return std::vector<double> 角度[rad]
+ */
+std::vector<double> getJointAngleParam(){
+    std::vector<double> result;
+    for (auto &motor : *getRobotArm())
+    {
+        result.push_back(motor.joint_angle_);
+    }
+    return result;
+}
+
 
 
 /**
