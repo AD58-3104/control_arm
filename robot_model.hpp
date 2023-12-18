@@ -92,13 +92,14 @@ struct StraightChainRobotModel
      */
     void setJointAngle(const double joint_angle)
     {
-        joint_angle_ = joint_angle;
+        
+        joint_angle_ = joint_angle * (does_reverse_ ? -1.0f : 1.0f);
         z_link_rotate_ = get3DRotationMatrix(Eigen::Vector3d(0, 0, joint_angle_));
         if (clone_motors.size() != 0)
         {
             for (auto &clone_motor : clone_motors)
             {
-                clone_motor.setJointAngle(joint_angle);
+                clone_motor.setJointAngle(joint_angle_);
             }
         }
         return;
