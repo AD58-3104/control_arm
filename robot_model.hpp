@@ -87,7 +87,7 @@ struct StraightChainRobotModel
 
     /**
      * @brief Set the Joint Angle object
-     * @param joint_angle [rad]
+     * @param joint_angle 絶対角度 [rad]
      * @todo 角度の変更に伴う同次変換行列の更新
      */
     void setJointAngle(const double joint_angle)
