@@ -68,7 +68,7 @@ int main(int argc, char const *argv[])
     std::cout << "--- End position ---" << std::endl;
     std::cout << result.getEndPositionVec().transpose() << std::endl;
     result.print();
-    getJointAngle();
+    getCalcJointAngle();
     std::cout << "[yarinaoshi_count] :" << yarinaoshi_count << std::endl;
     plotArm(result);
     return 0;
