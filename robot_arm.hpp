@@ -61,6 +61,9 @@ arm_shared_ptr_t createRobotArm()
     // 手先のリンク
     robot_arm->push_back(StraightChainRobotModel(5, 66.5, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     // robot_arm->push_back(StraightChainRobotModel(5, 60, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    for(auto& motor : *robot_arm){
+        motor.setJointAngle(0);    //JointAngleを0にしておく
+    }
     return robot_arm;
 }
 

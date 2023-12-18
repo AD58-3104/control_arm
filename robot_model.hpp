@@ -55,9 +55,9 @@ struct StraightChainRobotModel
                                                clone_motors()
     {
         joint_angle_offset_ = z_link_rotate(2);
-        std::cout << "[In constructor] z_link_rotate(2): " << z_link_rotate(2) << std::endl;
-        std::cout << "[In constructor] z_link_rotate: " << z_link_rotate << std::endl;
-        joint_angle_ = joint_angle_offset_;
+        // std::cout << "[In constructor] z_link_rotate(2): " << z_link_rotate(2) << std::endl;
+        // std::cout << "[In constructor] z_link_rotate: " << z_link_rotate << std::endl;
+        // joint_angle_ = joint_angle_offset_; //オフセットは別の場所で足すのでここで足すとマズイことになる。
     }
     void printLinkState()
     {
@@ -93,6 +93,22 @@ struct StraightChainRobotModel
         return;
     }
 
+    double getCurrentJointAngle() const noexcept 
+    {
+        return joint_angle_;
+    }
+
+    /**
+     * @brief 相対的に関節角度を変更する。z軸の回転に関する同時変換行列も更新される。
+     * 
+     * @param input_relative_joint_angle 
+     */
+    void setRelativeJointAngle(const double input_relative_joint_angle)
+    {
+        setJointAngle(getCurrentJointAngle() + input_relative_joint_angle);
+        
+    }
+
     /**
      * @brief z軸関節角度を設定する。z軸の回転に関する同時変換行列も更新される。
      * @param input_joint_angle 絶対角度 [rad]
@@ -101,9 +117,9 @@ struct StraightChainRobotModel
     {
         joint_angle_ = (does_reverse_ ? -1.0f : 1.0f) * input_joint_angle;
         z_link_rotate_ = get3DRotationMatrix(Eigen::Vector3d(0, 0, joint_angle_ + joint_angle_offset_ * (does_reverse_ ? -1.0f : 1.0f)));
-        // std::cout << "joint_angle_: " << joint_angle_ << std::endl;
-        // std::cout << "joint_angle_offset: " << joint_angle_offset_ << std::endl;
-        // std::cout << z_link_rotate_ << std::endl;
+        // std::cout << "[setJointAngle] joint_angle_: " << joint_angle_ << std::endl;
+        // std::cout << "[setJointAngle] joint_angle_offset: " << joint_angle_offset_ << std::endl;
+        // std::cout << "[setJointAngle] " <<z_link_rotate_ << std::endl;
         if (clone_motors.size() != 0)
         {
             for (auto &clone_motor : clone_motors)
