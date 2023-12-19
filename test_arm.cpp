@@ -2,11 +2,15 @@
 #include "robot_arm.hpp"
 #include <iostream>
 #include <sciplot/sciplot.hpp>
+#include "helper_func.hpp"
 
 using namespace sciplot;
 using namespace Eigen;
 int main(int argc, char const *argv[])
 {
+    MagnetController magnet;
+    magnet.control(MagnetController::magnet_state::ENABLE_UP);
+    magnet.control(MagnetController::magnet_state::ENABLE_DOWN);
     dxl_motor motors;
     motors.addMotorId(1);
     motors.addMotorId(2);
@@ -25,9 +29,11 @@ int main(int argc, char const *argv[])
     ptr->at(4).setJointAngle(0); //手先の回転
     moveArm(motors);
 
-    Eigen::Vector3d target_pos{0,22.5 + 190 + 66.5,200};
+    Eigen::Vector3d target_pos{90,22.5 + 190 + 66.5,40};
+    Eigen::Vector3d height_and_distance{0,calcDistanceXY(target_pos),target_pos(2)};
     auto solution = solveCCDINV(target_pos);
     auto result = calcForwardKinematics();
+    plot2darm();
     int ok = -100;
     std::cout << "if you want to move arm, input number > 765" << std::endl;
     std::cin >> ok;
