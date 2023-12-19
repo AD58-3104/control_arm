@@ -19,6 +19,9 @@ if(NOT sciplot_content_POPULATED)
   FetchContent_Populate(dynamixelsdk)
 endif()
 
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
+FetchContent_MakeAvailable(json)
+
 message(STATUS "sciplot_SOURCE_DIR: ${sciplot_SOURCE_DIR}")
 message(STATUS "dynamixelsdk_SOURCE_DIR: ${dynamixelsdk_SOURCE_DIR}")
 
@@ -45,7 +48,7 @@ list(APPEND targets test_move test_geome test_arm solve_kine reset_zero check_mo
 
 foreach(itm IN LISTS targets)
   target_compile_features(${itm} PRIVATE cxx_std_20)
-  target_compile_options(${itm} PRIVATE -fdiagnostics-color)
+  target_compile_options(${itm} PRIVATE -fdiagnostics-color -g)
   target_include_directories(${itm} PRIVATE ${EIGEN3_INCLUDE_DIRS} ${dynamixelsdk_SOURCE_DIR} ${sciplot_SOURCE_DIR})
-  target_link_libraries(${itm} PRIVATE Eigen3::Eigen pthread)
+  target_link_libraries(${itm} PRIVATE Eigen3::Eigen pthread nlohmann_json::nlohmann_json)
 endforeach(itm IN LISTS ${targets})
