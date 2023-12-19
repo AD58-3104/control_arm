@@ -33,6 +33,8 @@ file(GLOB_RECURSE DXL_SOURCES ${dynamixelsdk_SOURCE_DIR}/c++/src/dynamixel_sdk/*
 file(GLOB_RECURSE SCPLOT_SOURCES ${sciplot_SOURCE_DIR}/sciplot/*)
 
 find_package(Eigen3 REQUIRED)
+find_package(Boost REQUIRED)
+
 add_executable(test_matplotlib test_matplotlib.cpp ${SCPLOT_SOURCES})
 add_executable(test_move test_move.cpp ${DXL_SOURCES} robot_model.hpp)
 add_executable(reset_zero reset_zero.cpp ${DXL_SOURCES} robot_model.hpp)
@@ -49,6 +51,6 @@ list(APPEND targets test_move test_geome test_arm solve_kine reset_zero check_mo
 foreach(itm IN LISTS targets)
   target_compile_features(${itm} PRIVATE cxx_std_20)
   target_compile_options(${itm} PRIVATE -fdiagnostics-color -g)
-  target_include_directories(${itm} PRIVATE ${EIGEN3_INCLUDE_DIRS} ${dynamixelsdk_SOURCE_DIR} ${sciplot_SOURCE_DIR})
-  target_link_libraries(${itm} PRIVATE Eigen3::Eigen pthread nlohmann_json::nlohmann_json)
+  target_include_directories(${itm} PRIVATE ${EIGEN3_INCLUDE_DIRS} ${dynamixelsdk_SOURCE_DIR} ${sciplot_SOURCE_DIR} ${Boost_INCLUDE_DIR})
+  target_link_libraries(${itm} PRIVATE Eigen3::Eigen pthread nlohmann_json::nlohmann_json ${Boost_LIBRARIES})
 endforeach(itm IN LISTS ${targets})
