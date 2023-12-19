@@ -27,49 +27,58 @@ int main(int argc, char const *argv[])
         target_pos(2) = 20;
     }
     auto ptr = createRobotArm();
-    ResultPosition result;
-    std::vector<double> degs;
-    size_t yarinaoshi_count = 0;
-    constexpr size_t yarinaoshi_threshould = 10000;
-    auto checkYZisnotMinus = [](const ResultPosition& pos) -> bool {
-        for (size_t ind = 0; ind < pos.z.size(); ind++)
-        {
-            if (pos.z[ind] < -0.1) //誤差考慮
-            {
-                // std::cout << "[Error]: z is minus on link " << ind << " !!!!!" << std::endl;
-                return false;
-            }
-            if(pos.y[ind] < -0.1){ //誤差考慮
-                return false;
-            }
-            ind++;
-        }
-        return true;
-    };
-    while (true)
-    {
-        auto joi = getRandomJointDegree(ptr->size());
-        joi[0] = 0;//根元の回転はしてほしくないので0にする
-        setAllJointAngle(joi); //ランダムな初期姿勢を設定
-        auto solution = calcInverseKinematics(target_pos);
-        if(solution.has_value()){
-            result = calcForwardKinematics();
-            if(checkYZisnotMinus(result)){
-                break;
-            }
-        }
-        yarinaoshi_count++;
-        if(yarinaoshi_count > yarinaoshi_threshould){
-            std::cerr << "<<<<< Cannot solve problem!!! >>>>> " << std::endl;
-            return 1;
-        }
+    auto res_opt = solveCCDINV(target_pos);
+    if(res_opt.has_value()){
+        auto result_degs = res_opt.value();
     }
-    std::cout << "------------- [Calculation is finished] -------------" << std::endl;
-    std::cout << "--- End position ---" << std::endl;
-    std::cout << result.getEndPositionVec().transpose() << std::endl;
-    result.print();
+    else{
+        std::cerr << "<<<<< Cannot solve problem!!! >>>>> " << std::endl;
+        return 1;
+    }
+    ResultPosition result = calcForwardKinematics();
+    // std::vector<double> degs;
+    // size_t yarinaoshi_count = 0;
+    // constexpr size_t yarinaoshi_threshould = 10000;
+    // auto checkYZisnotMinus = [](const ResultPosition& pos) -> bool {
+    //     for (size_t ind = 0; ind < pos.z.size(); ind++)
+    //     {
+    //         if (pos.z[ind] < -0.1) //誤差考慮
+    //         {
+    //             // std::cout << "[Error]: z is minus on link " << ind << " !!!!!" << std::endl;
+    //             return false;
+    //         }
+    //         if(pos.y[ind] < -0.1){ //誤差考慮
+    //             return false;
+    //         }
+    //         ind++;
+    //     }
+    //     return true;
+    // };
+    // while (true)
+    // {
+    //     auto joi = getRandomJointDegree(ptr->size());
+    //     joi[0] = 0;//根元の回転はしてほしくないので0にする
+    //     setAllJointAngle(joi); //ランダムな初期姿勢を設定
+    //     auto solution = calcInverseKinematics(target_pos);
+    //     if(solution.has_value()){
+    //         result = calcForwardKinematics();
+    //         if(checkYZisnotMinus(result)){
+    //             break;
+    //         }
+    //     }
+    //     yarinaoshi_count++;
+    //     if(yarinaoshi_count > yarinaoshi_threshould){
+    //         std::cerr << "<<<<< Cannot solve problem!!! >>>>> " << std::endl;
+    //         return 1;
+    //     }
+    // }
+    // std::cout << "------------- [Calculation is finished] -------------" << std::endl;
+    // std::cout << "--- End position ---" << std::endl;
+    // std::cout << result.getEndPositionVec().transpose() << std::endl;
+    // result.print();
     getCalcJointAngle();
-    std::cout << "[yarinaoshi_count] :" << yarinaoshi_count << std::endl;
-    plotArm(result);
+    // std::cout << "[yarinaoshi_count] :" << yarinaoshi_count << std::endl;
+    // plotArm(result);
+    plot2darm();
     return 0;
 }
