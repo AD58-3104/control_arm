@@ -378,17 +378,15 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
 
 bool checkYZisnotMinus(const ResultPosition &pos)
 {
-    for (size_t ind = 0; ind < pos.z.size(); ind++)
-    {
-        if (pos.z[ind] < -0.1) // 誤差考慮
-        {
+    for(const auto& y : pos.y){
+        if(y < 0.f){
             return false;
         }
-        if (pos.y[ind] < -0.1)
-        { // 誤差考慮
+    }
+    for(const auto& z : pos.z){
+        if(z < 0.f){
             return false;
         }
-        ind++;
     }
     return true;
 }
@@ -457,10 +455,14 @@ std::optional<std::vector<double>> solveCCDINV(const Eigen::Vector3d target_pos)
         solution = calcInverseKinematics(target_pos);
         if (solution.has_value())
         {
-            result = calcForwardKinematics();
-            if (checkYZisnotMinus(result))
+            auto tmp  = calcForwardKinematics();
+            if (checkYZisnotMinus(tmp))
             {
+                result = tmp;
                 break;
+            }
+            else{ //ダメな時はダメ
+                solution = std::nullopt;
             }
         }
         yarinaoshi_count++;
