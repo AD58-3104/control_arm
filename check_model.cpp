@@ -1,4 +1,5 @@
 #include "robot_arm.hpp"
+#include "helper_func.hpp"
 
 void printContainer(const std::vector<double>& vec,std::string message = ""){
     std::cout << message;
@@ -21,10 +22,10 @@ int main(int argc, char const *argv[])
     ptr->at(2).setJointAngle(0);
     ptr->at(2).setRelativeJointAngle(0);
     ptr->at(2).setRelativeJointAngle(M_PI/8.0f);
+    ptr->at(2).setRelativeJointAngle(-M_PI/8.0f);
     ptr->at(2).setRelativeJointAngle(M_PI/8.0f);
-    ptr->at(2).setRelativeJointAngle(M_PI/8.0f);
-    ptr->at(2).setRelativeJointAngle(M_PI/8.0f);
-    ptr->at(2).setJointAngle(M_PI/8.0f);
+    ptr->at(2).setRelativeJointAngle(-M_PI/8.0f);
+    // ptr->at(2).setJointAngle(M_PI/8.0f);
     // ptr->at(2).setJointAngle(0);
     // ptr->at(2).setJointAngle(0);
     std::cout << "offset" <<ptr->at(2).joint_angle_offset_ << std::endl;;
@@ -44,6 +45,10 @@ int main(int argc, char const *argv[])
     auto res = calcForwardKinematics();
     auto degs = getJointAngleParam();
     printContainer(degs,"[joint param degs] ");
+    Eigen::Vector3d target_pos{250,250,0};
+    std::cout << target_pos.transpose() << std::endl;
+    std::cout << "[target degree] " << calcAngleXY(target_pos) * 180.f /M_PI << std::endl;
+    std::cout << "[target distance] " << calcDistanceXY(target_pos) << std::endl;
     return 0;
 }
 

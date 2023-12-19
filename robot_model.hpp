@@ -35,6 +35,7 @@ struct StraightChainRobotModel
     double joint_angle_; // [rad]
     double joint_angle_offset_; // [rad] //構造上でz方向の回転が発生している時のオフセット
     bool does_reverse_;  // 1 or -1
+    bool is_imagenary_;  //動かさない仮想のリンク
     std::list<StraightChainRobotModel> clone_motors;
     StraightChainRobotModel(const uint8_t motor_id, const bool does_reverse) : motor_id_(motor_id), does_reverse_(does_reverse_)
     {
@@ -52,6 +53,7 @@ struct StraightChainRobotModel
                                                joint_angle_(0),
                                                joint_angle_offset_(0),
                                                does_reverse_(false),
+                                               is_imagenary_(false),
                                                clone_motors()
     {
         joint_angle_offset_ = z_link_rotate(2);
@@ -84,6 +86,12 @@ struct StraightChainRobotModel
     void setYoffset(const double y_offset)
     {
         x_link_length_(1,0) = y_offset;
+        return;
+    }
+
+    void seImagenary(const bool is_imagenary)
+    {
+        is_imagenary_ = is_imagenary;
         return;
     }
 

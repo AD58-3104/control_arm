@@ -48,6 +48,7 @@ arm_shared_ptr_t createRobotArm()
 
     // origin
     robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 24, Eigen::Vector3d::Zero()));
+    robot_arm->back().seImagenary(true);
     // 根元回転
     robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d(0, -M_PI / 2.0, 0), 0, Eigen::Vector3d::Zero()));
     // id2のクローン.
@@ -60,6 +61,7 @@ arm_shared_ptr_t createRobotArm()
     robot_arm->push_back(StraightChainRobotModel(4, 190, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     // 手先のリンク
     robot_arm->push_back(StraightChainRobotModel(5, 66.5, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    robot_arm->back().seImagenary(true);
     // robot_arm->push_back(StraightChainRobotModel(5, 60, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     for(auto& motor : *robot_arm){
         motor.setJointAngle(0);    //JointAngleを0にしておく
@@ -86,6 +88,10 @@ void moveArm(dxl_motor &motors)
     }
     for (auto &motor : *robot_arm)
     {
+        //イマジナリーモータは動かさない
+        if(motor.is_imagenary_){
+            continue;
+        }
         int16_t position = motor.joint_angle_ * 180 / M_PI; // ラジアンから戻す
         // if (motor.does_reverse_)
         // {
