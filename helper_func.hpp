@@ -29,11 +29,11 @@ struct MagnetController
     boost::asio::serial_port port_;
     MagnetController() : ioc_(), port_(ioc_)
     {
-        port_.open("/dev/ttyUSB0");
-        port_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
-        port_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
-        port_.set_option(boost::asio::serial_port_base::baud_rate(100000));
-        port_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+        port_.open("/dev/ttyACM0");
+        // port_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+        // port_.set_option(boost::asio::serial_port_base::stop_bits::one);
+        port_.set_option(boost::asio::serial_port_base::baud_rate(115200));
+        // port_.set_option(boost::asio::serial_port_base::parity::none);
         sleep(1);
     }
     ~MagnetController()
@@ -45,12 +45,13 @@ struct MagnetController
         int write_len =  port_.write_some(boost::asio::buffer(buffers, buffers.size()));
         return (write_len == buffers.size());
     }
+    //Mainが上側
     enum magnet_state : uint8_t
     {
-        ENABLE_UP = 0b00000001,
-        DISABLE_UP = 0b00000010,
-        ENABLE_DOWN = 0b00000100,
-        DISABLE_DOWN = 0b00001000
+        ENABLE_UP = 0b00000001, //白だけ付く
+        DISABLE_UP = 0b00000010, //黒だけ付く
+        ENABLE_DOWN = 0b00000100, //白だけ付く
+        DISABLE_DOWN = 0b00001000 //黒だけ付く
     };
     bool control(uint8_t desired_state){
         uint8_t data = 0;
