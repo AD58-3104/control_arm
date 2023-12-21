@@ -76,7 +76,13 @@ int main(int argc, char const *argv[])
     // std::cout << "--- End position ---" << std::endl;
     // std::cout << result.getEndPositionVec().transpose() << std::endl;
     // result.print();
-    getCalcJointAngle();
+    // getCalcJointAngle();
+    auto degsss = getJointAngleParam();
+    std::cout << "[Joint degree data] ";
+    for(const auto &deg : degsss){
+        std::cout << deg * 180.f / M_PI << "," << std::endl;
+    }
+    std::cout << std::endl;
     // std::cout << "[yarinaoshi_count] :" << yarinaoshi_count << std::endl;
     // plotArm(result);
     plot2darm();
