@@ -38,6 +38,7 @@ struct MagnetController
     }
     ~MagnetController()
     {
+        control(0);
         port_.close();
     }
     bool write_some(const std::vector<uint8_t> &buffers)
@@ -48,9 +49,9 @@ struct MagnetController
     //Mainが上側
     enum magnet_state : uint8_t
     {
-        ENABLE_UP = 0b00000001, //白だけ付く
+        ENABLE_UP = 0b00000001, //上の白だけ付く
         DISABLE_UP = 0b00000010, //黒だけ付く
-        ENABLE_DOWN = 0b00000100, //白だけ付く
+        ENABLE_DOWN = 0b00000100, //下の白だけ付く
         DISABLE_DOWN = 0b00001000 //黒だけ付く
     };
     bool control(uint8_t desired_state){
@@ -72,5 +73,24 @@ struct MagnetController
         return write_some(sendbuf);
     }
 };
+
+/**
+ * @brief ラジアン換算で150 ~ -150度の範囲に収める
+ * @param rad 
+ * @return double 
+ */
+double clampRadian(const double angle_rad ){
+    // 角度をラジアンから度に変換
+    double angle_deg = angle_rad * (180.0 / M_PI);
+
+    // 角度を-150度から150度の範囲に丸める
+    while (angle_deg > 150.0) angle_deg -= 360.0;
+    while (angle_deg < -150.0) angle_deg += 360.0;
+
+    // 角度を度からラジアンに戻す
+    double wrapped_angle = angle_deg * (M_PI / 180.0);
+
+    return wrapped_angle;
+}
 
 #endif // !HELPER_FUNC_HPP
