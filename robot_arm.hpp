@@ -15,6 +15,8 @@
 #include <vector>
 #include <ctime>
 
+#include "helper_func.hpp"
+
 /**
  * @brief Get the Random Joint Degree object
  * @param num 生成する個数
@@ -48,7 +50,7 @@ arm_shared_ptr_t createRobotArm()
 
     // origin
     robot_arm->push_back(StraightChainRobotModel(1, 0, Eigen::Vector3d::Zero(), 24, Eigen::Vector3d::Zero()));
-    robot_arm->back().seImagenary(true);
+    // robot_arm->back().seImagenary(true);
     // 根元回転
     robot_arm->push_back(StraightChainRobotModel(2, 0, Eigen::Vector3d(0, -M_PI / 2.0, 0), 0, Eigen::Vector3d::Zero()));
     // id2のクローン.
@@ -62,7 +64,8 @@ arm_shared_ptr_t createRobotArm()
     // 手先のリンク
     robot_arm->push_back(StraightChainRobotModel(5, 66.5, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
     robot_arm->back().seImagenary(true);
-    // robot_arm->push_back(StraightChainRobotModel(5, 60, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d::Zero()));
+    robot_arm->push_back(StraightChainRobotModel(5, 40, Eigen::Vector3d::Zero(), 0, Eigen::Vector3d(0, 0, M_PI / 2)));
+    robot_arm->back().seImagenary(true);
     for(auto& motor : *robot_arm){
         motor.setJointAngle(0);    //JointAngleを0にしておく
     }
@@ -86,13 +89,16 @@ void moveArm(dxl_motor &motors)
     {
         throw std::runtime_error("robot_arm is not initialized!");
     }
-    for (auto &motor : *robot_arm)
+    auto rev_itr = robot_arm->rbegin();
+    // for (auto &motor : *robot_arm)
+    for (;rev_itr != robot_arm->rend();++rev_itr)
     {
+        auto &motor = *rev_itr;
         //イマジナリーモータは動かさない
         if(motor.is_imagenary_){
             continue;
         }
-        int16_t position = motor.joint_angle_ * 180 / M_PI; // ラジアンから戻す
+        int16_t position = clampRadian(motor.joint_angle_) * 180 / M_PI; // ラジアンから戻す
         // if (motor.does_reverse_)
         // {
         //     position *= -1.0f;    //setJointAngleの方で逆にした
@@ -189,6 +195,7 @@ void plotArm(const ResultPosition data)
         << std::endl
         << "plot3(x,y,z,'-o');"
         << std::endl
+        
         << "title('My Plot');"
         << std::endl
         << "xlabel('x');"
@@ -291,8 +298,8 @@ void setAllJointAngle(const std::vector<double> joint_angles)
 constexpr double error_threshold = 5.0f;
 std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d target_position)
 {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(0);
+    // std::ios_base::sync_with_stdio(false);
+    // std::cin.tie(0);
     if (robot_arm == nullptr)
     {
         throw std::runtime_error("robot_arm is not initialized!");
@@ -328,6 +335,9 @@ std::optional<std::vector<double>> calcInverseKinematics(const Eigen::Vector3d t
             if (muki(0) >= 0)
             {
                 target_angle *= -1.0f; // zの回転軸が自分が最初設定したつもりのものと逆だったのでx方向へのプラスのベクトルで逆回転になる。
+            }
+            if(index == arm_size){ //最後は仮想リンクなので回転はしない。元の90度のまま
+                target_angle = 0.0f;
             }
             getRobotArm()->at(index - 1).setRelativeJointAngle(target_angle);
             result[index - 1] = target_angle * -1.0f;
@@ -390,7 +400,7 @@ bool checkYZisnotMinus(const ResultPosition &pos)
         }
     }
     for(const auto& z : pos.z){
-        if(z < 0.f){
+        if(z < -15.f){
             return false;
         }
     }
